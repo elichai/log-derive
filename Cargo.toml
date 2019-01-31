@@ -11,7 +11,7 @@ keywords = ["log", "macro", "derive", "logging", "function"]
 
 [dependencies]
 proc-macro2 = "0.4"
-syn = { version = "0.15", features = ["full", "extra-traits"] }
+syn = { version = "0.15", features = ["full"] }
 quote = "0.6"
 log = "0.4"
 

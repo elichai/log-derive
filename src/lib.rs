@@ -2,7 +2,8 @@
 extern crate proc_macro;
 extern crate syn;
 use proc_macro2::{Span, TokenStream};
-use syn::{punctuated::Punctuated, *, token};
+use syn::{parse_macro_input, AttributeArgs, NestedMeta, Meta, ReturnType, Ident, ItemFn, Result,
+          Expr, ExprClosure, ExprBlock, Lit, token, Type, punctuated::Punctuated};
 use quote::quote;
 use syn::export::quote::ToTokens;
 
