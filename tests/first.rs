@@ -1,13 +1,13 @@
-use log_derive::log;
+use log_derive::logfn;
 use log::log;
-#[log(INFO)]
+#[logfn(INFO)]
 fn wrapped_function(a: u8, b: &str) {
     println!("{} {}", b, a);
 }
 
 struct AAAAAA;
 impl AAAAAA {
-    #[log(Info)]
+    #[logfn(Info)]
     pub fn yoyoy(&self, a: String, b: u8, c: Vec<u8>) -> Vec<u8> {
         log!(log::Level::Info, "Hi!");
         vec![0u8; 8]

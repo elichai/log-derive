@@ -71,7 +71,7 @@ fn edit_original(mut original: ItemFn) -> ItemFn {
 }
 
 #[proc_macro_attribute]
-pub fn log(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let attr = proc_macro2::TokenStream::from(attr);
     let inside: ItemFn = parse_macro_input!(item as ItemFn);
     let (inputs, has_self) = fnargs_into_barename(&inside.decl.inputs);
