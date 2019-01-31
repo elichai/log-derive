@@ -1,19 +1,86 @@
 #![recursion_limit="128"]
+
+//! # Log Derive
+//!
+//! `log-derive` provides a simple attribute macro that facilitates logs as part of the [`log`] facade <br>
+//! Right now the only macro is [`logfn`], this macro is only for functions but it still have a lot of power.
+//!
+//!
+//!  # Use
+//! The basic use of the macro is by putting it on top of the function like this: `#[logfn(INFO)]` <br>
+//! The return type of the function **must** implement Debug in order for this to work. <br>
+//! The macro will accept all log levels provided by the [`log`] facade. <br>
+//! If the function return a [`Result`] type the macro will accept the following additional attributes:
+//! `(ok = "LEVEL")` and `(err = "LEVEL")` this can provide different log levels if the function failed or not. <br>
+//! By default the macro uses the following formatting to print the message: `("LOG DERIVE: {:?}", return_val)` <br>
+//! This can be easily changed using the `fmt` attribute: `#[logfn(LEVEL, fmt = "Important Result: {:}")`
+//! which will accept format strings similar to [`println!`].
+//!
+//! [`logfn`]: ./attr.logfn.html
+//! [`log`]: https://docs.rs/log/latest/log/index.html
+//! [`Result`]: https://doc.rust-lang.org/std/result/enum.Result.html
+//! [`println!`]: https://doc.rust-lang.org/stable/std/macro.println.html
+//!
+//! ## Examples
+//! ```rust
+//! #[macro_use]
+//! extern crate log_derive;
+//! #[macro_use]
+//! extern crate log;
+//!
+//! # #[derive(Debug)]
+//! struct Error;
+//! # #[derive(Debug)]
+//! struct Success;
+//! # #[derive(Debug)]
+//! enum Status { Alive, Dead, Unknown }
+//!
+//! #[logfn(Warn)]
+//! fn is_alive(person: &Person) -> Status {
+//!     # use self::Response::*;
+//!     # use self::Status::*;
+//!    match person.ping() {
+//!        Pong => Status::Alive,
+//!        Timeout => if person.is_awake() {
+//!            Unknown
+//!        } else {
+//!            Dead
+//!        }
+//!   }
+//!}
+//!
+//! #[logfn(ok = "TRACE", err = "ERROR")]
+//! fn call_isan(num: &str) -> Result<Success, Error> {
+//!     if num.len() >= 10 && num.len() <= 15 {
+//!         Ok(Success)
+//!     } else {
+//!         Err(Error)
+//!     }
+//! }
+//!
+//! #[logfn(INFO, fmt = "a + b = {}")]
+//! fn addition(a: usize, b: usize) -> usize {
+//!     a + b
+//! }
+//!
+//! # fn main() {}
+//! # enum Response {Pong, Timeout}
+//! # struct Person;
+//! # impl Person {fn ping(&self) -> Response {Response::Pong}fn is_awake(&self) -> bool {true}}
+//! ```
+//!
+//!
 extern crate proc_macro;
 extern crate syn;
 use proc_macro2::{Span, TokenStream};
 use syn::{parse_macro_input, AttributeArgs, NestedMeta, Meta, ReturnType, Ident, ItemFn, Result,
-          Expr, ExprClosure, ExprBlock, Lit, token, Type, punctuated::Punctuated};
+          Expr, ExprClosure, ExprBlock, Lit, token, Type, punctuated::Punctuated, export::quote::ToTokens};
 use quote::quote;
-use syn::export::quote::ToTokens;
-
-// TODO: Optimize imports. and optimize syn features.
 
 struct FormattedAttributes {
     ok_expr: TokenStream,
     err_expr: TokenStream,
 }
-
 
 impl FormattedAttributes {
     pub fn parse_attributes(attr: AttributeArgs) -> Self {
@@ -173,6 +240,21 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
 
      syn::parse2(code)
 }
+
+/// Logs the result of the function it's above.
+/// # Examples
+/// ``` rust
+///  # #[macro_use] extern crate log_derive;
+/// # use std::{net::*, io::{self, Write}};
+/// #[logfn(Err = "Error", fmt = "Failed Sending Packet: {:?}")]
+/// fn send_hi(addr: SocketAddr) -> Result<(), io::Error> {
+///     let mut stream = TcpStream::connect(addr)?;
+///     stream.write(b"Hi!")?;
+///     Ok( () )
+/// }
+///
+///
+/// ```
 #[proc_macro_attribute]
 pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let attr = parse_macro_input!(attr as AttributeArgs);
