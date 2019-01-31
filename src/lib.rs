@@ -2,38 +2,15 @@
 extern crate proc_macro;
 extern crate syn;
 use proc_macro2::{Span, TokenStream};
-use syn::{punctuated::Punctuated, token::Comma, *, token};
+use syn::{punctuated::Punctuated, *, token};
 use quote::quote;
 use syn::export::quote::ToTokens;
 
 // TODO: Let the user Customize loggings.
 // TODO: Add log_enabled condition to skip this all thing if not enabled.
 // TODO: Optimize imports. and optimize syn features.
-fn fnargs_into_barename(list: &Punctuated<FnArg, Comma>) -> (TokenStream, bool) {
-    let mut cool = Vec::with_capacity(list.len());
-    let mut self_based = false;
-    for arg in list {
-        match arg {
-            FnArg::Captured(ArgCaptured {pat, ..}) => {
-                let a = pat.into_token_stream();
-                let a: BareFnArgName = syn::parse2(a).expect("Failed on Bare1");
-                cool.push(a);
-            }
-            FnArg::SelfRef(ArgSelfRef{self_token, ..}) | FnArg::SelfValue(ArgSelf{self_token, ..}) => {
-                let ident = Ident::new("self", self_token.span);
-                let bare = BareFnArgName::Named(ident);
-                cool.push(bare);
-                self_based = true;
-
-            }
-            _ => panic!("Can't Recognize Argument"),
-        }
-    }
-
-    let args: Punctuated<BareFnArgName, Comma> = cool.into_iter().collect();
-    (args.into_token_stream(), self_based)
-}
-
+// TODO: How should I do this with traits impl?
+// TODO: Add different log levels for Ok/Err (if the return value is Result)
 
 fn set_logger(att: &TokenStream) -> TokenStream {
     let attr = att.to_string().to_lowercase();
@@ -48,49 +25,54 @@ fn set_logger(att: &TokenStream) -> TokenStream {
     res.into_token_stream()
 }
 
-fn get_ouside(inner_call: &TokenStream, original: &ItemFn, logger: &TokenStream) -> ItemFn {
-    let outside_code = quote! {
-        fn temp() {
-                #inner_call
-                log::log!(#logger, "LOG DERIVE: {:?}", res);
-                res
-        }
-    };
-    let mut outside: ItemFn = syn::parse2(outside_code).expect("Outside");
-    outside.ident = Ident::new(&original.ident.to_string(), original.ident.span());
-    outside.decl = original.decl.clone();
-    outside.vis = original.vis.clone();
+fn make_closure(original: &ItemFn) -> ExprClosure {
+    let body = Box::new(Expr::Block(ExprBlock{
+        attrs: Default::default(),
+        label: Default::default(),
+        block: *original.block.clone(),
+    }));
 
-    outside
+    ExprClosure{
+        attrs: Default::default(),
+        asyncness: Default::default(),
+        movability: Default::default(),
+        capture: Default::default(),
+        or1_token: Default::default(),
+        inputs: Default::default(),
+        or2_token: Default::default(),
+        output: ReturnType::Default,
+        body,
+    }
 }
 
-fn edit_original(mut original: ItemFn) -> ItemFn {
-    original.ident = Ident::new(&format!("_{}", original.ident), original.ident.span());
-    original.vis = Visibility::Inherited;
-    original
+fn replace_function_headers(original: &ItemFn, new: &mut ItemFn) {
+    new.ident = Ident::new(&original.ident.to_string(), original.ident.span());
+    new.decl = original.decl.clone();
+    new.vis = original.vis.clone();
+}
+
+fn generate_function(closure: &ExprClosure, logger: &TokenStream) -> Result<ItemFn> {
+    let code = quote!{
+        fn temp() {
+            let closure = #closure;
+            let result = closure();
+            log::log!(#logger, "LOG DERIVE: {:?}", result);
+            result
+        }
+    };
+     syn::parse2(code)
 }
 
 #[proc_macro_attribute]
 pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let attr = proc_macro2::TokenStream::from(attr);
-    let inside: ItemFn = parse_macro_input!(item as ItemFn);
-    let (inputs, has_self) = fnargs_into_barename(&inside.decl.inputs);
+    let original_fn: ItemFn = parse_macro_input!(item as ItemFn);
 
+    let closure = make_closure(&original_fn);
     let logger = set_logger(&attr);
-    let edited_inside = edit_original(inside.clone());
+    let mut new_fn = generate_function(&closure, &logger).expect("Failed Generating Function");
+    replace_function_headers(&original_fn, &mut new_fn);
 
-    let edited_inside_name = &edited_inside.ident;
-    let inner_call = if has_self {
-        quote!(let res = Self::#edited_inside_name(#inputs);)
-    } else {
-        quote!(let res = #edited_inside_name(#inputs);)
-    };
-    let outside = get_ouside(&inner_call, &inside, &logger);
-
-    let res = quote! {
-        #edited_inside
-        #outside
-    };
-    res.into()
+    new_fn.into_token_stream().into()
 
 }
