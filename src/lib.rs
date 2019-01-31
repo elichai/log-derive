@@ -54,7 +54,7 @@ fn replace_function_headers(original: &ItemFn, new: &mut ItemFn) {
 fn generate_function(closure: &ExprClosure, logger: &TokenStream) -> Result<ItemFn> {
     let code = quote!{
         fn temp() {
-            let closure = #closure;
+            let mut closure = #closure;
             let result = closure();
             log::log!(#logger, "LOG DERIVE: {:?}", result);
             result
