@@ -51,11 +51,11 @@ impl FormattedAttributes {
 
             let ok_log = ok_log.map_or_else(|| general_log.clone(), Some );
             let err_log = err_log.map_or_else(|| general_log, Some);
-            let fmt = fmt.unwrap_or(String::from("LOG DERIVE: {:?}"));
+            let fmt = fmt.unwrap_or_else(|| String::from("LOG DERIVE: {:?}"));
 
             let ok_expr = match ok_log {
                 Some(loglevel) => {
-                    let log_token = get_logger_token(loglevel);
+                    let log_token = get_logger_token(&loglevel);
                     quote!{log::log!(#log_token, #fmt, result);}
                 }
                 None => quote!{()},
@@ -63,7 +63,7 @@ impl FormattedAttributes {
 
             let err_expr = match err_log {
                 Some(loglevel) => {
-                    let log_token = get_logger_token(loglevel);
+                    let log_token = get_logger_token(&loglevel);
                     quote!{log::log!(#log_token, #fmt, err);}
                 }
                 None => quote!{()},
@@ -88,13 +88,9 @@ fn check_if_return_result(f: &ItemFn) -> bool {
             match  *t.clone() {
                 Type::Path(tp) => {
                     if tp.path.segments.is_empty() {
-                        return false;
+                        false
                     } else {
-                        if tp.path.segments[0].ident.to_string() == "Result" {
-                            return true;
-                        } else {
-                            return false;
-                        }
+                        tp.path.segments[0].ident == "Result"
                     }
                 },
                 _ => false,
@@ -106,7 +102,7 @@ fn check_if_return_result(f: &ItemFn) -> bool {
 }
 
 
-fn get_logger_token(att: String) -> TokenStream {
+fn get_logger_token(att: &str) -> TokenStream {
     let attr = att.to_lowercase();
     let mut attr_char = attr.chars();
     let att_str = attr_char.next().unwrap().to_uppercase().to_string() + attr_char.as_str();
@@ -180,7 +176,6 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
 pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let attr = parse_macro_input!(attr as AttributeArgs);
     let parsed_attributes = FormattedAttributes::parse_attributes(attr);
-    let i = item.clone();
     let original_fn: ItemFn = parse_macro_input!(item as ItemFn);
 
     let closure = make_closure(&original_fn);
