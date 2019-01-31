@@ -1,0 +1,14 @@
+[package]
+name = "log-derive"
+version = "0.1.0"
+authors = ["elichai2"]
+edition = "2018"
+
+[dependencies]
+proc-macro2 = "0.4"
+syn = { version = "0.15", features = ["full", "extra-traits"] }
+quote = "0.6"
+log = "0.4"
+
+[lib]
+proc-macro = true
