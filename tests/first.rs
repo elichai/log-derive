@@ -1,6 +1,6 @@
 use log_derive::logfn;
 use log::log;
-#[logfn(INFO)]
+#[logfn(INFO, fmt = "DB: {:?}", ok="debug", err="trace")]
 fn wrapped_function(a: u8, b: &str) {
     let mut test1 = Vec::new();
     let mut test2 = || {
@@ -12,7 +12,7 @@ fn wrapped_function(a: u8, b: &str) {
 
 struct AAAAAA;
 impl AAAAAA {
-//    #[logfn(Info)]
+    #[logfn(Info)]
     pub fn yoyoy(&self, a: String, b: u8, c: Vec<u8>) -> Vec<u8> {
         log!(log::Level::Info, "Hi! {}, {}, {:?}", a, b, c);
         vec![0u8; 8]
@@ -32,7 +32,8 @@ struct Tes(pub bool);
 
 impl Test for Me {
 
-    #[logfn(Info)]
+//    #[logfn(Info)]
+    #[logfn(INFO, fmt = "DB: {:?}", ok="debug", err="trace")]
     fn abc(&mut self, err: Tes) -> Result<String, E> {
         let mut clos = || {
             self.third(&err)?;
