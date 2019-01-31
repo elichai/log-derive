@@ -15,6 +15,8 @@ Add this to your `Cargo.toml`:
 ```toml
 [dependencies]
 log-derive = "0.2"
+log = "0.4"
+
 ```
 
 and for Rust Edition 2015 add this to your crate root:
@@ -22,6 +24,7 @@ and for Rust Edition 2015 add this to your crate root:
 ```rust
 #[macro_use]
 extern crate log_derive;
+extern crate log;
 ```
 In Rust Edition 2018 you can simply do:
 ```rust
@@ -49,3 +52,40 @@ fn test_log(a: u8) -> String {
 }
 
 ```
+
+# Output
+The output of the [fibonacci](./examples/fibonacci.rs) example:
+```
+20:34:21 [INFO] fibonacci(1)
+20:34:21 [INFO] fibonacci(1)
+20:34:21 [INFO] fibonacci(2)
+20:34:21 [INFO] fibonacci(1)
+20:34:21 [INFO] fibonacci(3)
+20:34:21 [INFO] fibonacci(1)
+20:34:21 [INFO] fibonacci(1)
+20:34:21 [INFO] fibonacci(2)
+20:34:21 [INFO] fibonacci(5)
+20:34:21 [INFO] fibonacci(1)
+20:34:21 [INFO] fibonacci(1)
+20:34:21 [INFO] fibonacci(2)
+20:34:21 [INFO] fibonacci(1)
+20:34:21 [INFO] fibonacci(3)
+20:34:21 [INFO] fibonacci(8)
+```
+
+If you expand the output of the macro the resulting code will look something like this:
+```rust
+fn fibonacci(n: u32) -> u32 {
+    let mut closure = || match n {
+        0 => 1,
+        1 => 1,
+        _ => fibonacci(n - 1) + fibonacci(n - 2),
+    };
+    let result = closure();
+    log::log!(log::Level::Info, "fibonacci({})", result);
+    result
+}
+```
+Of course the `log!` macro will be expanded too and it will be a bit more messy.
+
+If the function returns a `Result` it will match through it to split between the `Ok` LogLevel and the `Err` LogLevel

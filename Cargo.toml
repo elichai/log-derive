@@ -16,6 +16,11 @@ syn = { version = "0.15", features = ["full"] }
 quote = "0.6"
 log = "0.4"
 
+
+[dev-dependencies]
+log = "0.4"
+simplelog = "0.5"
+
 [badges]
 travis-ci = { repository = "elichai/log-derive" }
 
