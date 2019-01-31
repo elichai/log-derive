@@ -1,8 +1,12 @@
 [package]
 name = "log-derive"
 version = "0.1.0"
-authors = ["elichai2"]
+authors = ["Elichai <elichai.turkel@gmail.com>"]
+license = "MIT/Apache-2.0"
 edition = "2018"
+description = "Procedural Macro for logging result of a function"
+categories = ["development-tools::debugging"]
+keywords = ["log", "macro", "derive", "logging", "function"]
 
 [dependencies]
 proc-macro2 = "0.4"
