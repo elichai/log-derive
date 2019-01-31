@@ -1,0 +1,18 @@
+language: rust
+sudo: false
+rust:
+  - stable
+  - beta
+  - nightly
+  - nightly-2018-10-01-x86_64-unknown-linux-gnu
+script:
+  - cargo build --verbose
+  - cargo test --verbose
+
+before_script:
+  - rustup component add clippy-preview
+  - cargo clippy -- -D clippy::all
+
+notifications:
+  email:
+    on_success: never
