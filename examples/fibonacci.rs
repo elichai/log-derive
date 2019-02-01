@@ -2,7 +2,7 @@ use log_derive::logfn;
 use simplelog::{TermLogger, Config};
 use log::LevelFilter;
 
-#[logfn(INFO, fmt = "fibonacci({})")]
+#[logfn(INFO, fmt = "fibonacci() -> {}")]
 fn fibonacci(n: u32) -> u32 {
     match n {
         0 => 1,

@@ -56,21 +56,21 @@ fn test_log(a: u8) -> String {
 # Output
 The output of the [fibonacci](./examples/fibonacci.rs) example:
 ```
-20:34:21 [INFO] fibonacci(1)
-20:34:21 [INFO] fibonacci(1)
-20:34:21 [INFO] fibonacci(2)
-20:34:21 [INFO] fibonacci(1)
-20:34:21 [INFO] fibonacci(3)
-20:34:21 [INFO] fibonacci(1)
-20:34:21 [INFO] fibonacci(1)
-20:34:21 [INFO] fibonacci(2)
-20:34:21 [INFO] fibonacci(5)
-20:34:21 [INFO] fibonacci(1)
-20:34:21 [INFO] fibonacci(1)
-20:34:21 [INFO] fibonacci(2)
-20:34:21 [INFO] fibonacci(1)
-20:34:21 [INFO] fibonacci(3)
-20:34:21 [INFO] fibonacci(8)
+14:55:41 [INFO] fibonacci() -> 1
+14:55:41 [INFO] fibonacci() -> 1
+14:55:41 [INFO] fibonacci() -> 2
+14:55:41 [INFO] fibonacci() -> 1
+14:55:41 [INFO] fibonacci() -> 3
+14:55:41 [INFO] fibonacci() -> 1
+14:55:41 [INFO] fibonacci() -> 1
+14:55:41 [INFO] fibonacci() -> 2
+14:55:41 [INFO] fibonacci() -> 5
+14:55:41 [INFO] fibonacci() -> 1
+14:55:41 [INFO] fibonacci() -> 1
+14:55:41 [INFO] fibonacci() -> 2
+14:55:41 [INFO] fibonacci() -> 1
+14:55:41 [INFO] fibonacci() -> 3
+14:55:41 [INFO] fibonacci() -> 8
 ```
 
 If you expand the output of the macro the resulting code will look something like this:
@@ -82,7 +82,7 @@ fn fibonacci(n: u32) -> u32 {
         _ => fibonacci(n - 1) + fibonacci(n - 2),
     };
     let result = closure();
-    log::log!(log::Level::Info, "fibonacci({})", result);
+    log::log!(log::Level::Info, "fibonacci() -> {}", result);
     result
 }
 ```

@@ -18,7 +18,6 @@ log = "0.4"
 
 
 [dev-dependencies]
-log = "0.4"
 simplelog = "0.5"
 
 [badges]
