@@ -214,8 +214,8 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
     let code = if result {
         quote!{
             fn temp() {
-                let mut closure = #closure;
-                match closure() {
+                let result = (#closure)();
+                match result {
                     Ok(result) => {
                         #ok_expr;
                         return Ok(result);
@@ -230,8 +230,7 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
     } else {
         quote!{
             fn temp() {
-                let mut closure = #closure;
-                let result = closure();
+                let result = (#closure)();
                 #ok_expr;
                 result
             }
