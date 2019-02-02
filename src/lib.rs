@@ -194,7 +194,7 @@ fn make_closure(original: &ItemFn) -> ExprClosure {
         attrs: Default::default(),
         asyncness: Default::default(),
         movability: Default::default(),
-        capture: Default::default(),
+        capture: Some(token::Move{span: Span::call_site()}),
         or1_token: Default::default(),
         inputs: Default::default(),
         or2_token: Default::default(),
