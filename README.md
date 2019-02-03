@@ -76,12 +76,11 @@ The output of the [fibonacci](./examples/fibonacci.rs) example:
 If you expand the output of the macro the resulting code will look something like this:
 ```rust
 fn fibonacci(n: u32) -> u32 {
-    let mut closure = || match n {
+    let result = (move || match n {
         0 => 1,
         1 => 1,
         _ => fibonacci(n - 1) + fibonacci(n - 2),
-    };
-    let result = closure();
+    })();
     log::log!(log::Level::Info, "fibonacci() -> {}", result);
     result
 }
