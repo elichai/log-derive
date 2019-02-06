@@ -74,7 +74,7 @@ extern crate proc_macro;
 extern crate syn;
 use proc_macro2::{Span, TokenStream};
 use syn::{parse_macro_input, AttributeArgs, NestedMeta, Meta, ReturnType, Ident, ItemFn, Result,
-          Expr, ExprClosure, ExprBlock, Lit, token, Type, punctuated::Punctuated, export::quote::ToTokens};
+          Expr, ExprClosure, ExprBlock, Lit, token, Type, punctuated::Punctuated, export::quote::ToTokens, spanned::Spanned};
 use quote::quote;
 
 struct FormattedAttributes {
@@ -194,7 +194,7 @@ fn make_closure(original: &ItemFn) -> ExprClosure {
         attrs: Default::default(),
         asyncness: Default::default(),
         movability: Default::default(),
-        capture: Some(token::Move{span: Span::call_site()}),
+        capture: Some(token::Move{span: original.span()}),
         or1_token: Default::default(),
         inputs: Default::default(),
         or2_token: Default::default(),
@@ -203,10 +203,10 @@ fn make_closure(original: &ItemFn) -> ExprClosure {
     }
 }
 
-fn replace_function_headers(original: &ItemFn, new: &mut ItemFn) {
-    new.ident = Ident::new(&original.ident.to_string(), original.ident.span());
-    new.decl = original.decl.clone();
-    new.vis = original.vis.clone();
+fn replace_function_headers(original: ItemFn, new: &mut ItemFn) {
+    let block = new.block.clone();
+    *new = original;
+    new.block = block;
 }
 
 fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, result: bool) -> Result<ItemFn> {
@@ -263,7 +263,7 @@ pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> pr
     let closure = make_closure(&original_fn);
     let is_result = check_if_return_result(&original_fn);
     let mut new_fn = generate_function(&closure, &parsed_attributes, is_result).expect("Failed Generating Function");
-    replace_function_headers(&original_fn, &mut new_fn);
+    replace_function_headers(original_fn, &mut new_fn);
     new_fn.into_token_stream().into()
 
 }
