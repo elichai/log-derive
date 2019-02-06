@@ -1,6 +1,6 @@
 [package]
 name = "log-derive"
-version = "0.2.3"
+version = "0.2.4"
 license = "MIT/Apache-2.0"
 authors = ["Elichai <elichai.turkel@gmail.com>"]
 repository = "https://github.com/elichai/log-derive"
