@@ -87,8 +87,8 @@ struct FormattedAttributes {
 }
 
 impl FormattedAttributes {
-    pub fn parse_attributes(attr: AttributeArgs) -> darling::Result<Self> {
-        Options::from_list(&attr).map(get_ok_err_streams)
+    pub fn parse_attributes(attr: &AttributeArgs) -> darling::Result<Self> {
+        Options::from_list(attr).map(|opts| get_ok_err_streams(&opts))
     }
 }
 
@@ -153,7 +153,7 @@ impl FromMeta for Options {
     }
 }
 
-fn get_ok_err_streams(att: Options) -> FormattedAttributes {
+fn get_ok_err_streams(att: &Options) -> FormattedAttributes {
     let ok_log = att.ok_log();
     let err_log = att.err_log();
     let fmt = att.fmt().unwrap_or("LOG DERIVE: {:?}");
@@ -278,7 +278,7 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
 #[proc_macro_attribute]
 pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let attr = parse_macro_input!(attr as AttributeArgs);
-    let parsed_attributes = match FormattedAttributes::parse_attributes(attr) {
+    let parsed_attributes = match FormattedAttributes::parse_attributes(&attr) {
         Ok(val) => val,
         Err(err) => {
             return err.write_errors().into();
