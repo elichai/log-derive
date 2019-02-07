@@ -148,25 +148,25 @@ fn get_literal_str(l: Lit) -> String {
     }
 }
 
-fn check_if_return_result(f: &ItemFn) -> bool {
-    let retrn = &f.decl.output;
-    match retrn {
-        ReturnType::Default => false,
-        ReturnType::Type(_, t) => {
-            match  *t.clone() {
-                Type::Path(tp) => {
-                    if tp.path.segments.is_empty() {
-                        false
-                    } else {
-                        tp.path.segments[0].ident == "Result"
-                    }
-                },
-                _ => false,
-            }
-        }
+/// Check if a return type is some form of `Result`. This assumes that all types named `Result`
+/// are in fact results, but is resilient to the possibility of `Result` types being referenced
+/// from specific modules.
+pub(crate) fn is_result_type(ty: &syn::TypePath) -> bool {
+    if let Some(segment) = ty.path.segments.iter().last() {
+        segment.ident == "Result"
+    } else {
+        false
+    }
+}
 
+fn check_if_return_result(f: &ItemFn) -> bool {
+    if let ReturnType::Type(_, t) = &f.decl.output {
+        if let Type::Path(path) = t.as_ref() {
+            return is_result_type(path);
+        }
     }
 
+    false
 }
 
 
@@ -266,4 +266,19 @@ pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> pr
     replace_function_headers(original_fn, &mut new_fn);
     new_fn.into_token_stream().into()
 
+}
+
+#[cfg(test)]
+mod tests {
+    use quote::quote;
+    use syn::parse_quote;
+
+    use super::is_result_type;
+
+    #[test]
+    fn result_type() {
+        assert!(is_result_type(&parse_quote!(Result<T, E>)));
+        assert!(is_result_type(&parse_quote!(std::result::Result<T, E>)));
+        assert!(is_result_type(&parse_quote!(fmt::Result)));
+    }
 }
