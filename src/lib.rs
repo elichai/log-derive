@@ -87,10 +87,7 @@ struct FormattedAttributes {
 }
 
 impl FormattedAttributes {
-    // We allow the ptr_arg here as `AttributeArgs` is just `Vec<Attribute>`, but
-    // for clarity's sake we don't want to desugar that in the function signature.
-    #[allow(clippy::ptr_arg)]
-    pub fn parse_attributes(attr: &AttributeArgs) -> darling::Result<Self> {
+    pub fn parse_attributes(attr: &[NestedMeta]) -> darling::Result<Self> {
         Options::from_list(attr).map(|opts| get_ok_err_streams(&opts))
     }
 }
