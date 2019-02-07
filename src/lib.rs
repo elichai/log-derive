@@ -161,9 +161,10 @@ pub(crate) fn is_result_type(ty: &syn::TypePath) -> bool {
 
 fn check_if_return_result(f: &ItemFn) -> bool {
     if let ReturnType::Type(_, t) = &f.decl.output {
-        if let Type::Path(path) = t.as_ref() {
-            return is_result_type(path);
-        }
+        return match t.as_ref() {
+            Type::Path(path) => is_result_type(path),
+            _ => false,
+        };
     }
 
     false
