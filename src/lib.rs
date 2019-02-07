@@ -214,17 +214,9 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
     let code = if result {
         quote!{
             fn temp() {
-                let result = (#closure)();
-                match result {
-                    Ok(result) => {
-                        #ok_expr;
-                        return Ok(result);
-                    }
-                    Err(err) => {
-                        #err_expr;
-                        return Err(err);
-                    }
-                }
+                (#closure)()
+                    .map(|result| { #ok_expr; result })
+                    .map_err(|err| { #err_expr; err })
             }
         }
     } else {
