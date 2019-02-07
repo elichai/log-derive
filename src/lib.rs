@@ -1,4 +1,4 @@
-#![recursion_limit="128"]
+#![recursion_limit = "128"]
 
 //! # Log Derive
 //!
@@ -72,10 +72,14 @@
 //!
 extern crate proc_macro;
 extern crate syn;
-use proc_macro2::{Span, TokenStream};
-use syn::{parse_macro_input, AttributeArgs, NestedMeta, Meta, ReturnType, Ident, ItemFn, Result,
-          Expr, ExprClosure, ExprBlock, Lit, token, Type, punctuated::Punctuated, export::quote::ToTokens, spanned::Spanned};
-use quote::quote;
+use darling::FromMeta;
+use ident_case::RenameRule;
+use proc_macro2::TokenStream;
+use quote::{quote, ToTokens};
+use syn::{
+    parse_macro_input, spanned::Spanned, token, AttributeArgs, Expr, ExprBlock, ExprClosure, Ident,
+    ItemFn, Meta, NestedMeta, Result, ReturnType, Type,
+};
 
 struct FormattedAttributes {
     ok_expr: TokenStream,
@@ -83,69 +87,93 @@ struct FormattedAttributes {
 }
 
 impl FormattedAttributes {
-    pub fn parse_attributes(attr: AttributeArgs) -> Self {
-        #[derive(Default, Debug)]
-        struct Attributes {
-            ok_log: Option<String>,
-            err_log: Option<String>,
-            fmt: Option<String>,
-            general_log: Option<String>
-        }
-        let mut result = Attributes::default();
-        for at in attr {
-            match at {
-                NestedMeta::Meta(meta) => {
-                    match meta {
-                        Meta::Word(ident) => result.general_log = Some(ident.to_string()),
-                        Meta::NameValue(nv) => {
-                            match nv.ident.to_string().to_lowercase().as_str() {
-                                "fmt" => result.fmt = Some(get_literal_str(nv.lit)),
-                                "ok" => result.ok_log = Some(get_literal_str(nv.lit)),
-                                "err" => result.err_log = Some(get_literal_str(nv.lit)),
-                                _ => panic!("Unsupported literal"),
-                            }
-                        }
-                        Meta::List(_) => panic!("List in the macro aren't supported"),
-                    }
-                },
-                NestedMeta::Literal(_) => panic!("Direct literals  outside of name=value aren't supported"),
-            }
-        }
-        return get_ok_err_streams(result);
-
-
-        fn get_ok_err_streams(att: Attributes) -> FormattedAttributes {
-            let Attributes { ok_log, err_log, fmt, general_log } = att;
-
-            let ok_log = ok_log.map_or_else(|| general_log.clone(), Some );
-            let err_log = err_log.map_or_else(|| general_log, Some);
-            let fmt = fmt.unwrap_or_else(|| String::from("LOG DERIVE: {:?}"));
-
-            let ok_expr = match ok_log {
-                Some(loglevel) => {
-                    let log_token = get_logger_token(&loglevel);
-                    quote!{log::log!(#log_token, #fmt, result);}
-                }
-                None => quote!{()},
-            };
-
-            let err_expr = match err_log {
-                Some(loglevel) => {
-                    let log_token = get_logger_token(&loglevel);
-                    quote!{log::log!(#log_token, #fmt, err);}
-                }
-                None => quote!{()},
-            };
-            FormattedAttributes { ok_expr, err_expr }
-        }
+    pub fn parse_attributes(attr: AttributeArgs) -> darling::Result<Self> {
+        Options::from_list(&attr).map(get_ok_err_streams)
     }
 }
 
-fn get_literal_str(l: Lit) -> String {
-    match l {
-        Lit::Str(litstr) => litstr.value(),
-        _ => panic!("Literals other the Str aren't supported"),
+#[derive(Default, FromMeta)]
+#[darling(default)]
+struct NamedOptions {
+    ok: Option<Ident>,
+    err: Option<Ident>,
+    fmt: Option<String>,
+}
+
+struct Options {
+    /// The log level specified as the first word in the attribute.
+    leading_level: Option<Ident>,
+    named: NamedOptions,
+}
+
+impl Options {
+    pub fn ok_log(&self) -> Option<&Ident> {
+        self.named
+            .ok
+            .as_ref()
+            .or_else(|| self.leading_level.as_ref())
     }
+
+    pub fn err_log(&self) -> Option<&Ident> {
+        self.named
+            .err
+            .as_ref()
+            .or_else(|| self.leading_level.as_ref())
+    }
+
+    pub fn fmt(&self) -> Option<&str> {
+        self.named.fmt.as_ref().map(|s| s.as_str())
+    }
+}
+
+impl FromMeta for Options {
+    fn from_list(items: &[NestedMeta]) -> darling::Result<Self> {
+        if items.is_empty() {
+            return Err(darling::Error::too_few_items(1));
+                    }
+
+        let mut leading_level = None;
+
+        if let NestedMeta::Meta(first) = &items[0] {
+            if let Meta::Word(ident) = first {
+                leading_level = Some(ident.clone());
+            }
+        }
+
+        let named = if leading_level.is_some() {
+            NamedOptions::from_list(&items[1..])?
+        } else {
+            NamedOptions::from_list(items)?
+        };
+
+        Ok(Options {
+            leading_level,
+            named,
+        })
+    }
+}
+
+fn get_ok_err_streams(att: Options) -> FormattedAttributes {
+    let ok_log = att.ok_log();
+    let err_log = att.err_log();
+    let fmt = att.fmt().unwrap_or("LOG DERIVE: {:?}");
+
+    let ok_expr = match ok_log {
+        Some(loglevel) => {
+            let log_token = get_logger_token(&loglevel);
+            quote!{log::log!(#log_token, #fmt, result);}
+        }
+        None => quote!{()},
+    };
+
+    let err_expr = match err_log {
+        Some(loglevel) => {
+            let log_token = get_logger_token(&loglevel);
+            quote!{log::log!(#log_token, #fmt, err);}
+        }
+        None => quote!{()},
+    };
+    FormattedAttributes { ok_expr, err_expr }
 }
 
 fn check_if_return_result(f: &ItemFn) -> bool {
@@ -166,21 +194,14 @@ fn check_if_return_result(f: &ItemFn) -> bool {
         }
 
     }
-
 }
 
-
-fn get_logger_token(att: &str) -> TokenStream {
-    let attr = att.to_lowercase();
-    let mut attr_char = attr.chars();
-    let att_str = attr_char.next().unwrap().to_uppercase().to_string() + attr_char.as_str();
-    let mut res = Punctuated::new();
-    res.push_value(Ident::new("log", Span::call_site()));
-    res.push_punct(token::Colon2{ spans: [Span::call_site(); 2]});
-    res.push_value(Ident::new("Level", Span::call_site()));
-    res.push_punct(token::Colon2{ spans: [Span::call_site(); 2]});
-    res.push_value(Ident::new(&att_str, Span::call_site()));
-    res.into_token_stream()
+fn get_logger_token(att: &Ident) -> TokenStream {
+    let att_str = syn::Ident::new(
+        &RenameRule::PascalCase.apply_to_field(&att.to_string().to_lowercase()),
+        att.span(),
+    );
+    quote!(log::Level::#att_str)
 }
 
 fn make_closure(original: &ItemFn) -> ExprClosure {
@@ -245,7 +266,7 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
 /// ``` rust
 ///  # #[macro_use] extern crate log_derive;
 /// # use std::{net::*, io::{self, Write}};
-/// #[logfn(Err = "Error", fmt = "Failed Sending Packet: {:?}")]
+/// #[logfn(err = "Error", fmt = "Failed Sending Packet: {:?}")]
 /// fn send_hi(addr: SocketAddr) -> Result<(), io::Error> {
 ///     let mut stream = TcpStream::connect(addr)?;
 ///     stream.write(b"Hi!")?;
@@ -257,7 +278,13 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
 #[proc_macro_attribute]
 pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let attr = parse_macro_input!(attr as AttributeArgs);
-    let parsed_attributes = FormattedAttributes::parse_attributes(attr);
+    let parsed_attributes = match FormattedAttributes::parse_attributes(attr) {
+        Ok(val) => val,
+        Err(err) => {
+            return err.write_errors().into();
+        }
+    };
+
     let original_fn: ItemFn = parse_macro_input!(item as ItemFn);
 
     let closure = make_closure(&original_fn);
