@@ -73,12 +73,11 @@
 extern crate proc_macro;
 extern crate syn;
 use darling::FromMeta;
-use ident_case::RenameRule;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{
     parse_macro_input, spanned::Spanned, token, AttributeArgs, Expr, ExprBlock, ExprClosure, Ident,
-    ItemFn, Meta, NestedMeta, Result, ReturnType, Type,
+    ItemFn, Meta, NestedMeta, Result, ReturnType, Type, TypePath,
 };
 
 struct FormattedAttributes {
@@ -108,17 +107,11 @@ struct Options {
 
 impl Options {
     pub fn ok_log(&self) -> Option<&Ident> {
-        self.named
-            .ok
-            .as_ref()
-            .or_else(|| self.leading_level.as_ref())
+        self.named.ok.as_ref().or_else(|| self.leading_level.as_ref())
     }
 
     pub fn err_log(&self) -> Option<&Ident> {
-        self.named
-            .err
-            .as_ref()
-            .or_else(|| self.leading_level.as_ref())
+        self.named.err.as_ref().or_else(|| self.leading_level.as_ref())
     }
 
     pub fn fmt(&self) -> Option<&str> {
@@ -130,7 +123,7 @@ impl FromMeta for Options {
     fn from_list(items: &[NestedMeta]) -> darling::Result<Self> {
         if items.is_empty() {
             return Err(darling::Error::too_few_items(1));
-                    }
+        }
 
         let mut leading_level = None;
 
@@ -146,10 +139,7 @@ impl FromMeta for Options {
             NamedOptions::from_list(items)?
         };
 
-        Ok(Options {
-            leading_level,
-            named,
-        })
+        Ok( Options { leading_level, named } )
     }
 }
 
@@ -179,7 +169,7 @@ fn get_ok_err_streams(att: &Options) -> FormattedAttributes {
 /// Check if a return type is some form of `Result`. This assumes that all types named `Result`
 /// are in fact results, but is resilient to the possibility of `Result` types being referenced
 /// from specific modules.
-pub(crate) fn is_result_type(ty: &syn::TypePath) -> bool {
+pub(crate) fn is_result_type(ty: &TypePath) -> bool {
     if let Some(segment) = ty.path.segments.iter().last() {
         segment.ident == "Result"
     } else {
@@ -199,10 +189,11 @@ fn check_if_return_result(f: &ItemFn) -> bool {
 }
 
 fn get_logger_token(att: &Ident) -> TokenStream {
-    let att_str = syn::Ident::new(
-        &RenameRule::PascalCase.apply_to_field(&att.to_string().to_lowercase()),
-        att.span(),
-    );
+    // Capitalize the first letter.
+    let attr_str = att.to_string().to_lowercase();
+    let mut attr_char = attr_str.chars();
+    let attr_str = attr_char.next().unwrap().to_uppercase().to_string() + attr_char.as_str();
+    let att_str = Ident::new(&attr_str, att.span());
     quote!(log::Level::#att_str)
 }
 
