@@ -86,8 +86,31 @@ struct FormattedAttributes {
 }
 
 impl FormattedAttributes {
-    pub fn parse_attributes(attr: &[NestedMeta]) -> darling::Result<Self> {
-        Options::from_list(attr).map(|opts| get_ok_err_streams(&opts))
+    pub fn parse_attributes(attr: &[NestedMeta], fmt_default: &str) -> darling::Result<Self> {
+        Options::from_list(attr).map(|opts| Self::get_ok_err_streams(&opts, fmt_default))
+    }
+
+    fn get_ok_err_streams(att: &Options, fmt_default: &str) -> Self {
+        let ok_log = att.ok_log();
+        let err_log = att.err_log();
+        let fmt = att.fmt().unwrap_or(fmt_default);
+
+        let ok_expr = match ok_log {
+            Some(loglevel) => {
+                let log_token = get_logger_token(&loglevel);
+                quote!{log::log!(#log_token, #fmt, result);}
+            }
+            None => quote!{()},
+        };
+
+        let err_expr = match err_log {
+            Some(loglevel) => {
+                let log_token = get_logger_token(&loglevel);
+                quote!{log::log!(#log_token, #fmt, err);}
+            }
+            None => quote!{()},
+        };
+        FormattedAttributes { ok_expr, err_expr }
     }
 }
 
@@ -141,29 +164,6 @@ impl FromMeta for Options {
 
         Ok( Options { leading_level, named } )
     }
-}
-
-fn get_ok_err_streams(att: &Options) -> FormattedAttributes {
-    let ok_log = att.ok_log();
-    let err_log = att.err_log();
-    let fmt = att.fmt().unwrap_or("LOG DERIVE: {:?}");
-
-    let ok_expr = match ok_log {
-        Some(loglevel) => {
-            let log_token = get_logger_token(&loglevel);
-            quote!{log::log!(#log_token, #fmt, result);}
-        }
-        None => quote!{()},
-    };
-
-    let err_expr = match err_log {
-        Some(loglevel) => {
-            let log_token = get_logger_token(&loglevel);
-            quote!{log::log!(#log_token, #fmt, err);}
-        }
-        None => quote!{()},
-    };
-    FormattedAttributes { ok_expr, err_expr }
 }
 
 /// Check if a return type is some form of `Result`. This assumes that all types named `Result`
@@ -263,14 +263,14 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
 #[proc_macro_attribute]
 pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let attr = parse_macro_input!(attr as AttributeArgs);
-    let parsed_attributes = match FormattedAttributes::parse_attributes(&attr) {
+    let original_fn: ItemFn = parse_macro_input!(item as ItemFn);
+    let fmt_default = original_fn.ident.to_string() + "() => {:?}";
+    let parsed_attributes = match FormattedAttributes::parse_attributes(&attr, &fmt_default) {
         Ok(val) => val,
         Err(err) => {
             return err.write_errors().into();
         }
     };
-
-    let original_fn: ItemFn = parse_macro_input!(item as ItemFn);
 
     let closure = make_closure(&original_fn);
     let is_result = check_if_return_result(&original_fn);
