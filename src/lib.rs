@@ -98,17 +98,17 @@ impl FormattedAttributes {
         let ok_expr = match ok_log {
             Some(loglevel) => {
                 let log_token = get_logger_token(&loglevel);
-                quote!{log::log!(#log_token, #fmt, result);}
+                quote! {log::log!(#log_token, #fmt, result);}
             }
-            None => quote!{()},
+            None => quote! {()},
         };
 
         let err_expr = match err_log {
             Some(loglevel) => {
                 let log_token = get_logger_token(&loglevel);
-                quote!{log::log!(#log_token, #fmt, err);}
+                quote! {log::log!(#log_token, #fmt, err);}
             }
-            None => quote!{()},
+            None => quote! {()},
         };
         FormattedAttributes { ok_expr, err_expr }
     }
@@ -130,11 +130,17 @@ struct Options {
 
 impl Options {
     pub fn ok_log(&self) -> Option<&Ident> {
-        self.named.ok.as_ref().or_else(|| self.leading_level.as_ref())
+        self.named
+            .ok
+            .as_ref()
+            .or_else(|| self.leading_level.as_ref())
     }
 
     pub fn err_log(&self) -> Option<&Ident> {
-        self.named.err.as_ref().or_else(|| self.leading_level.as_ref())
+        self.named
+            .err
+            .as_ref()
+            .or_else(|| self.leading_level.as_ref())
     }
 
     pub fn fmt(&self) -> Option<&str> {
@@ -162,7 +168,10 @@ impl FromMeta for Options {
             NamedOptions::from_list(items)?
         };
 
-        Ok( Options { leading_level, named } )
+        Ok(Options {
+            leading_level,
+            named,
+        })
     }
 }
 
@@ -198,17 +207,19 @@ fn get_logger_token(att: &Ident) -> TokenStream {
 }
 
 fn make_closure(original: &ItemFn) -> ExprClosure {
-    let body = Box::new(Expr::Block(ExprBlock{
+    let body = Box::new(Expr::Block(ExprBlock {
         attrs: Default::default(),
         label: Default::default(),
         block: *original.block.clone(),
     }));
 
-    ExprClosure{
+    ExprClosure {
         attrs: Default::default(),
         asyncness: Default::default(),
         movability: Default::default(),
-        capture: Some(token::Move{span: original.span()}),
+        capture: Some(token::Move {
+            span: original.span(),
+        }),
         or1_token: Default::default(),
         inputs: Default::default(),
         or2_token: Default::default(),
@@ -223,10 +234,14 @@ fn replace_function_headers(original: ItemFn, new: &mut ItemFn) {
     new.block = block;
 }
 
-fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, result: bool) -> Result<ItemFn> {
+fn generate_function(
+    closure: &ExprClosure,
+    expressions: &FormattedAttributes,
+    result: bool,
+) -> Result<ItemFn> {
     let FormattedAttributes { ok_expr, err_expr } = expressions;
     let code = if result {
-        quote!{
+        quote! {
             fn temp() {
                 (#closure)()
                     .map(|result| { #ok_expr; result })
@@ -234,7 +249,7 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
             }
         }
     } else {
-        quote!{
+        quote! {
             fn temp() {
                 let result = (#closure)();
                 #ok_expr;
@@ -243,7 +258,7 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
         }
     };
 
-     syn::parse2(code)
+    syn::parse2(code)
 }
 
 /// Logs the result of the function it's above.
@@ -257,11 +272,12 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
 ///     stream.write(b"Hi!")?;
 ///     Ok( () )
 /// }
-///
-///
 /// ```
 #[proc_macro_attribute]
-pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn logfn(
+    attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
     let attr = parse_macro_input!(attr as AttributeArgs);
     let original_fn: ItemFn = parse_macro_input!(item as ItemFn);
     let fmt_default = original_fn.ident.to_string() + "() => {:?}";
@@ -274,10 +290,10 @@ pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> pr
 
     let closure = make_closure(&original_fn);
     let is_result = check_if_return_result(&original_fn);
-    let mut new_fn = generate_function(&closure, &parsed_attributes, is_result).expect("Failed Generating Function");
+    let mut new_fn = generate_function(&closure, &parsed_attributes, is_result)
+        .expect("Failed Generating Function");
     replace_function_headers(original_fn, &mut new_fn);
     new_fn.into_token_stream().into()
-
 }
 
 #[cfg(test)]
