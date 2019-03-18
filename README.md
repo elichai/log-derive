@@ -3,6 +3,7 @@
 [![Latest version](https://img.shields.io/crates/v/log-derive.svg)](https://crates.io/crates/log-derive)
 [![Documentation](https://docs.rs/log-derive/badge.svg)](https://docs.rs/log-derive)
 ![License](https://img.shields.io/crates/l/log-derive.svg)
+[![dependency status](https://deps.rs/repo/github/elichai/log-derive/status.svg)](https://deps.rs/repo/github/elichai/log-derive)
 
 A Rust macro to part of the [log](https://crates.io/crates/log) facade that auto generates loggings for functions output. 
 
