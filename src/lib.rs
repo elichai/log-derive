@@ -405,7 +405,6 @@ fn extract_ident_from_pat(pat: Pat) -> Ident {
 
 #[cfg(test)]
 mod tests {
-    use quote::quote;
     use syn::parse_quote;
 
     use super::is_result_type;

@@ -11,20 +11,18 @@ categories = ["development-tools::debugging"]
 keywords = ["log", "macro", "derive", "logging", "function"]
 
 [dependencies]
-darling = "0.8.5"
+darling = "0.9.0"
 proc-macro2 = "0.4"
 #syn = { version = "0.15", features = ["full", "extra-traits"] } # -> For development
 syn = { version = "0.15", features = ["full"] }
 quote = "0.6"
 log = "0.4"
 
-
 [dev-dependencies]
 simplelog = "0.5"
 
 [badges]
 travis-ci = { repository = "elichai/log-derive" }
-
 
 [lib]
 proc-macro = true

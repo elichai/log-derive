@@ -98,7 +98,7 @@ fn fibonacci(n: u32) -> u32 {
 ```
 If the function returns a `Result` it will match through it to split between the `Ok` LogLevel and the `Err` LogLevel
 
-The expansion of the `#[logfn_inputs` macro will look something like this:
+The expansion of the `#[logfn_inputs]` macro will look something like this:
 ```rust
 fn fibonacci(n: u32) -> u32 {
     log::log!(log::Level::Info, "fibonacci(n: {:?})", n);

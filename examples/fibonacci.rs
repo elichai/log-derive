@@ -12,8 +12,7 @@ use simplelog::{Config, TermLogger};
 //     }
 // }
 
-//#[logfn(INFO, fmt = "fibonacci() -> {}", ok = "Trace")]
-#[logfn(Info)]
+#[logfn(INFO, fmt = "fibonacci() -> {}", ok = "Trace")]
 #[logfn_inputs(Trace)]
 fn fibonacci(n: u32) -> u32 {
     match n {
