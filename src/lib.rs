@@ -72,12 +72,14 @@
 //!
 extern crate proc_macro;
 extern crate syn;
-use darling::FromMeta;
+use darling::{Error, FromMeta};
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
+
+use syn::punctuated::Punctuated;
 use syn::{
-    parse_macro_input, spanned::Spanned, token, AttributeArgs, Expr, ExprBlock, ExprClosure, Ident,
-    ItemFn, Meta, NestedMeta, Result, ReturnType, Type, TypePath,
+    parse_macro_input, spanned::Spanned, token, AttributeArgs, Expr, ExprBlock, ExprClosure, FnArg, Ident, ItemFn, Meta, NestedMeta,
+    Pat, Result, ReturnType, Stmt, Type, TypePath,
 };
 
 struct FormattedAttributes {
@@ -87,10 +89,10 @@ struct FormattedAttributes {
 
 impl FormattedAttributes {
     pub fn parse_attributes(attr: &[NestedMeta], fmt_default: &str) -> darling::Result<Self> {
-        Options::from_list(attr).map(|opts| Self::get_ok_err_streams(&opts, fmt_default))
+        OutputOptions::from_list(attr).map(|opts| Self::get_ok_err_streams(&opts, fmt_default))
     }
 
-    fn get_ok_err_streams(att: &Options, fmt_default: &str) -> Self {
+    fn get_ok_err_streams(att: &OutputOptions, fmt_default: &str) -> Self {
         let ok_log = att.ok_log();
         let err_log = att.err_log();
         let fmt = att.fmt().unwrap_or(fmt_default);
@@ -98,17 +100,17 @@ impl FormattedAttributes {
         let ok_expr = match ok_log {
             Some(loglevel) => {
                 let log_token = get_logger_token(&loglevel);
-                quote!{log::log!(#log_token, #fmt, result);}
+                quote! {log::log!(#log_token, #fmt, result);}
             }
-            None => quote!{()},
+            None => quote! {()},
         };
 
         let err_expr = match err_log {
             Some(loglevel) => {
                 let log_token = get_logger_token(&loglevel);
-                quote!{log::log!(#log_token, #fmt, err);}
+                quote! {log::log!(#log_token, #fmt, err);}
             }
-            None => quote!{()},
+            None => quote! {()},
         };
         FormattedAttributes { ok_expr, err_expr }
     }
@@ -116,13 +118,13 @@ impl FormattedAttributes {
 
 #[derive(Default, FromMeta)]
 #[darling(default)]
-struct NamedOptions {
+struct OutputNamedOptions {
     ok: Option<Ident>,
     err: Option<Ident>,
     fmt: Option<String>,
 }
 
-struct Options {
+struct OutputOptions {
     /// The log level specified as the first word in the attribute.
     leading_level: Option<Ident>,
     named: OutputNamedOptions,
@@ -170,11 +172,11 @@ impl OutputOptions {
     }
 
     pub fn fmt(&self) -> Option<&str> {
-        self.named.fmt.as_ref().map(|s| s.as_str())
+        self.named.fmt.as_ref().map(String::as_str)
     }
 }
 
-impl FromMeta for Options {
+impl FromMeta for OutputOptions {
     fn from_list(items: &[NestedMeta]) -> darling::Result<Self> {
         if items.is_empty() {
             return Err(darling::Error::too_few_items(1));
@@ -188,13 +190,10 @@ impl FromMeta for Options {
             }
         }
 
-        let named = if leading_level.is_some() {
-            NamedOptions::from_list(&items[1..])?
-        } else {
-            NamedOptions::from_list(items)?
-        };
+        let named =
+            if leading_level.is_some() { OutputNamedOptions::from_list(&items[1..])? } else { OutputNamedOptions::from_list(items)? };
 
-        Ok( Options { leading_level, named } )
+        Ok(OutputOptions { leading_level, named })
     }
 }
 
@@ -230,17 +229,14 @@ fn get_logger_token(att: &Ident) -> TokenStream {
 }
 
 fn make_closure(original: &ItemFn) -> ExprClosure {
-    let body = Box::new(Expr::Block(ExprBlock{
-        attrs: Default::default(),
-        label: Default::default(),
-        block: *original.block.clone(),
-    }));
+    let body =
+        Box::new(Expr::Block(ExprBlock { attrs: Default::default(), label: Default::default(), block: *original.block.clone() }));
 
-    ExprClosure{
+    ExprClosure {
         attrs: Default::default(),
         asyncness: Default::default(),
         movability: Default::default(),
-        capture: Some(token::Move{span: original.span()}),
+        capture: Some(token::Move { span: original.span() }),
         or1_token: Default::default(),
         inputs: Default::default(),
         or2_token: Default::default(),
@@ -258,7 +254,7 @@ fn replace_function_headers(original: ItemFn, new: &mut ItemFn) {
 fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, result: bool) -> Result<ItemFn> {
     let FormattedAttributes { ok_expr, err_expr } = expressions;
     let code = if result {
-        quote!{
+        quote! {
             fn temp() {
                 (#closure)()
                     .map(|result| { #ok_expr; result })
@@ -266,7 +262,7 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
             }
         }
     } else {
-        quote!{
+        quote! {
             fn temp() {
                 let result = (#closure)();
                 #ok_expr;
@@ -275,7 +271,7 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
         }
     };
 
-     syn::parse2(code)
+    syn::parse2(code)
 }
 
 /// Logs the result of the function it's above.
@@ -303,7 +299,6 @@ pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> pr
             return err.write_errors().into();
         }
     };
-
     let closure = make_closure(&original_fn);
     let is_result = check_if_return_result(&original_fn);
     let mut new_fn = generate_function(&closure, &parsed_attributes, is_result).expect("Failed Generating Function");
