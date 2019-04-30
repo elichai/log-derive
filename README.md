@@ -15,7 +15,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-log-derive = "0.2"
+log-derive = "0.3"
 log = "0.4"
 
 ```
