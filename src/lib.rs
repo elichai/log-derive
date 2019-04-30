@@ -319,7 +319,6 @@ pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> pr
     new_fn.into_token_stream().into()
 }
 
-
 /// Logs the inputs of the function
 /// # Examples
 /// ``` rust
