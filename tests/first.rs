@@ -55,6 +55,30 @@ impl Test for Me {
             return Ok(String::from("Hi!"))
         }
     }
+
+    #[logfn_inputs]
+    fn just_inputs(&self, err: &Tes) -> Result<String, E> {
+        if err.0 {
+            return Err(E);
+        } else {
+            return Ok(String::from("Hi!"));
+        }
+    }
+
+    #[logfn_inputs]
+    #[logfn(Info)]
+    fn both(&self, err: &Tes) -> Result<String, E> {
+        let mut clos = || {
+            self.third(&err)?;
+            if err.0 {
+                return Err(E);
+            } else {
+                return Ok(String::from("Hi!"));
+            }
+        };
+        let result = clos();
+        result
+    }
 }
 
 
@@ -66,6 +90,15 @@ fn works() {
     let mut b = Me(None);
     let tes = Tes(false);
     b.abc(tes).unwrap();
+}
+
+#[test]
+fn test_inputs() {
+    let b = Me(Some(5));
+    let tes = Tes(false);
+    b.just_inputs(&tes).unwrap();
+    b.both(&tes).unwrap();
+
 }
 
 #[test]
