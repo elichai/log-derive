@@ -277,7 +277,57 @@ pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> pr
     let mut new_fn = generate_function(&closure, &parsed_attributes, is_result).expect("Failed Generating Function");
     replace_function_headers(original_fn, &mut new_fn);
     new_fn.into_token_stream().into()
+}
 
+#[proc_macro_attribute]
+pub fn logfn_inputs(_attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let mut original_fn: ItemFn = parse_macro_input!(item as ItemFn);
+    let mut stmts = match log_fn_inputs(&original_fn) {
+        Ok(input_log) => vec![input_log],
+        Err(e) => return e.to_compile_error().into(),
+    };
+    stmts.extend(original_fn.block.stmts);
+    original_fn.block.stmts = stmts;
+    original_fn.into_token_stream().into()
+}
+
+fn log_fn_inputs(func: &ItemFn) -> syn::Result<Stmt> {
+    let fn_name = func.ident.to_string();
+    let inputs: Vec<Ident> = func
+        .decl
+        .inputs
+        .iter()
+        .cloned()
+        .map(|arg| match arg {
+            FnArg::SelfRef(arg) => arg.self_token.into(),
+            FnArg::SelfValue(arg) => arg.self_token.into(),
+            FnArg::Captured(arg) => extract_ident_from_pat(arg.pat),
+            FnArg::Inferred(pat) => extract_ident_from_pat(pat),
+            FnArg::Ignored(_) => unimplemented!(),
+        })
+        .collect();
+    let items: Punctuated<_, token::Comma> = inputs.iter().cloned().collect();
+    let mut fmt = String::with_capacity(inputs.len() * 9);
+    fmt.push_str(&fn_name);
+    fmt.push('(');
+    for input in inputs {
+        fmt.push_str(&input.to_string());
+        fmt.push_str(": {:?},");
+    }
+    fmt.pop(); // Remove the extra comma.
+    fmt.push(')');
+    let res = quote! {
+        log::log!(log::Level::Info, #fmt, #items);
+    };
+    syn::parse2(res)
+}
+
+fn extract_ident_from_pat(pat: Pat) -> Ident {
+    if let Pat::Ident(ident) = pat {
+        ident.ident
+    } else {
+        unimplemented!()
+    }
 }
 
 #[cfg(test)]
