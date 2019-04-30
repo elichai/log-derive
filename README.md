@@ -32,7 +32,8 @@ In Rust Edition 2018 you can simply do:
 use log_derive::logfn;
 ```
 
-After that all you need is to add the macro above a function that returns an output that implements the `Debug` trait.
+After that all you need is to add the according macro above a function that,  <br>
+either returns an output or receive an input that implements the `Debug` trait.
 
 # Examples
 
@@ -48,6 +49,15 @@ After that all you need is to add the macro above a function that returns an out
 
 ```rust
 #[logfn(Trace)]
+#[logfn_inputs(Info)]
+fn test_log(a: u8) -> String {
+  (a*2).to_string()
+}
+
+```
+
+```rust
+#[logfn(Trace, fmt = "testing the num: {:?}")]
 fn test_log(a: u8) -> String {
   (a*2).to_string()
 }
@@ -74,7 +84,7 @@ The output of the [fibonacci](./examples/fibonacci.rs) example:
 14:55:41 [INFO] fibonacci() -> 8
 ```
 
-If you expand the output of the macro the resulting code will look something like this:
+If you expand the output of the `#[logfn]` macro the resulting code will look something like this:
 ```rust
 fn fibonacci(n: u32) -> u32 {
     let result = (move || match n {
@@ -86,6 +96,18 @@ fn fibonacci(n: u32) -> u32 {
     result
 }
 ```
-Of course the `log!` macro will be expanded too and it will be a bit more messy.
-
 If the function returns a `Result` it will match through it to split between the `Ok` LogLevel and the `Err` LogLevel
+
+The expansion of the `#[logfn_inputs` macro will look something like this:
+```rust
+fn fibonacci(n: u32) -> u32 {
+    log::log!(log::Level::Info, "fibonacci(n: {:?})", n);
+    match n {
+        0 => 1,
+        1 => 1,
+        _ => fibonacci(n - 1) + fibonacci(n - 2),
+    }
+}
+```
+
+Of course the `log!` macro will be expanded too and it will be a bit more messy.

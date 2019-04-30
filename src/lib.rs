@@ -3,23 +3,32 @@
 //! # Log Derive
 //!
 //! `log-derive` provides a simple attribute macro that facilitates logs as part of the [`log`] facade <br>
-//! Right now the only macro is [`logfn`], this macro is only for functions but it still have a lot of power.
+//! Right now it contains two macros [`logfn`], [`logfn_inputs`] these macros are only for functions but still have a lot of power.
 //!
 //!
 //!  # Use
-//! The basic use of the macro is by putting it on top of the function like this: `#[logfn(INFO)]` <br>
-//! The return type of the function **must** implement Debug in order for this to work. <br>
-//! The macro will accept all log levels provided by the [`log`] facade. <br>
-//! If the function return a [`Result`] type the macro will accept the following additional attributes:
+//! The basic use of these macros is by putting one or both of them on top of the function like this: `#[logfn(INFO)]` <br>
+//!
+//! The [`logfn`] macro is used to log the *output* of the function and [`logfn_inputs`] is used to log the *inputs*. <br>
+//! Please notice, the arguments being logged **must** implement the [`Debug`] trait. <br>
+//! (i.e. [`logfn`] requires the output to be [`Debug`] and [`logfn_inputs`] require the inputs to be [`Debug`]) <br>
+//!
+//! The macros will accept all log levels provided by the [`log`] facade. <br>
+//! In [`logfn`] if the function returns a [`Result`] type the macro will accept the following additional attributes: <br>
 //! `(ok = "LEVEL")` and `(err = "LEVEL")` this can provide different log levels if the function failed or not. <br>
-//! By default the macro uses the following formatting to print the message: `("LOG DERIVE: {:?}", return_val)` <br>
-//! This can be easily changed using the `fmt` attribute: `#[logfn(LEVEL, fmt = "Important Result: {:}")`
+//!
+//! By default the macro uses the following formatting to print the message: <br>
+//! [`logfn`]: `("FUNCTION_NAME() => {:?}", return_val)` <br>
+//! [`logfn_inputs`]: `"FUNCTION_NAME(a: {:?}, b: {:?})", a, b)` <br>
+//! This can be easily changed using the `fmt` attribute: `#[logfn(LEVEL, fmt = "Important Result: {:}")` <br>
 //! which will accept format strings similar to [`println!`].
 //!
 //! [`logfn`]: ./attr.logfn.html
+//! [`logfn_inputs`]: ./attr.logfn_inputs.html
 //! [`log`]: https://docs.rs/log/latest/log/index.html
 //! [`Result`]: https://doc.rust-lang.org/std/result/enum.Result.html
 //! [`println!`]: https://doc.rust-lang.org/stable/std/macro.println.html
+//! [`Debug`]: https://doc.rust-lang.org/std/fmt/trait.Debug.html
 //!
 //! ## Examples
 //! ```rust
@@ -36,6 +45,7 @@
 //! enum Status { Alive, Dead, Unknown }
 //!
 //! #[logfn(Warn)]
+//! #[logfn_inputs(Info, fmt = "Checking if {:?} is alive")]
 //! fn is_alive(person: &Person) -> Status {
 //!     # use self::Response::*;
 //!     # use self::Status::*;
@@ -49,6 +59,7 @@
 //!   }
 //!}
 //!
+//! #[logfn_inputs(Info)]
 //! #[logfn(ok = "TRACE", err = "ERROR")]
 //! fn call_isan(num: &str) -> Result<Success, Error> {
 //!     if num.len() >= 10 && num.len() <= 15 {
@@ -59,12 +70,14 @@
 //! }
 //!
 //! #[logfn(INFO, fmt = "a + b = {}")]
+//! #[logfn_inputs(Trace, fmt = "adding a: {:?} and b: {:?}")]
 //! fn addition(a: usize, b: usize) -> usize {
 //!     a + b
 //! }
 //!
 //! # fn main() {}
 //! # enum Response {Pong, Timeout}
+//! # #[derive(Debug)]
 //! # struct Person;
 //! # impl Person {fn ping(&self) -> Response {Response::Pong}fn is_awake(&self) -> bool {true}}
 //! ```
@@ -306,6 +319,21 @@ pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> pr
     new_fn.into_token_stream().into()
 }
 
+
+/// Logs the inputs of the function
+/// # Examples
+/// ``` rust
+///  # #[macro_use] extern crate log_derive;
+/// # use std::{net::*, io::{self, Write}};
+/// #[logfn_inputs(INFO, fmt = "Good morning: {:?}, to: {:?}")]
+/// fn good_morning(msg: &str, addr: SocketAddr) -> Result<(), io::Error> {
+///     let mut stream = TcpStream::connect(addr)?;
+///     stream.write(msg.as_bytes())?;
+///     Ok( () )
+/// }
+///
+///
+/// ```
 #[proc_macro_attribute]
 pub fn logfn_inputs(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let mut original_fn: ItemFn = parse_macro_input!(item as ItemFn);
