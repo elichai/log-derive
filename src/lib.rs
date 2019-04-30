@@ -125,10 +125,42 @@ struct NamedOptions {
 struct Options {
     /// The log level specified as the first word in the attribute.
     leading_level: Option<Ident>,
-    named: NamedOptions,
+    named: OutputNamedOptions,
 }
 
-impl Options {
+struct InputOptions {
+    level: Ident,
+    fmt: Option<String>,
+}
+
+impl FromMeta for InputOptions {
+    fn from_list(items: &[NestedMeta]) -> darling::Result<Self> {
+        let mut level;
+        let mut fmt = None;
+        if items.is_empty() {
+            return Err(Error::too_few_items(1));
+        }
+
+        match &items[0] {
+            NestedMeta::Meta(first) => {
+                if let Meta::Word(ident) = first {
+                    level = ident.clone();
+                } else {
+                    return Err(Error::unexpected_type("first item should be a log level"));
+                }
+            }
+            NestedMeta::Literal(lit) => return Err(Error::unexpected_lit_type(lit)),
+        }
+
+        if items.len() > 1 {
+            fmt = String::from_nested_meta(&items[1]).ok();
+        }
+
+        Ok(InputOptions { level, fmt })
+    }
+}
+
+impl OutputOptions {
     pub fn ok_log(&self) -> Option<&Ident> {
         self.named.ok.as_ref().or_else(|| self.leading_level.as_ref())
     }
@@ -280,18 +312,28 @@ pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> pr
 }
 
 #[proc_macro_attribute]
-pub fn logfn_inputs(_attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn logfn_inputs(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let mut original_fn: ItemFn = parse_macro_input!(item as ItemFn);
-    let mut stmts = match log_fn_inputs(&original_fn) {
+
+    let attr = parse_macro_input!(attr as AttributeArgs);
+    let parsed_attributes = match InputOptions::from_list(&attr) {
+        Ok(val) => val,
+        Err(err) => {
+            return err.write_errors().into();
+        }
+    };
+
+    let mut stmts = match log_fn_inputs(&original_fn, parsed_attributes) {
         Ok(input_log) => vec![input_log],
         Err(e) => return e.to_compile_error().into(),
     };
+
     stmts.extend(original_fn.block.stmts);
     original_fn.block.stmts = stmts;
     original_fn.into_token_stream().into()
 }
 
-fn log_fn_inputs(func: &ItemFn) -> syn::Result<Stmt> {
+fn log_fn_inputs(func: &ItemFn, attr: InputOptions) -> syn::Result<Stmt> {
     let fn_name = func.ident.to_string();
     let inputs: Vec<Ident> = func
         .decl
@@ -306,18 +348,26 @@ fn log_fn_inputs(func: &ItemFn) -> syn::Result<Stmt> {
             FnArg::Ignored(_) => unimplemented!(),
         })
         .collect();
+
     let items: Punctuated<_, token::Comma> = inputs.iter().cloned().collect();
-    let mut fmt = String::with_capacity(inputs.len() * 9);
-    fmt.push_str(&fn_name);
-    fmt.push('(');
-    for input in inputs {
-        fmt.push_str(&input.to_string());
-        fmt.push_str(": {:?},");
-    }
-    fmt.pop(); // Remove the extra comma.
-    fmt.push(')');
+
+    let level = get_logger_token(&attr.level);
+    let fmt = attr.fmt.unwrap_or_else(|| {
+        let mut fmt = String::with_capacity(inputs.len() * 9);
+        fmt.push_str(&fn_name);
+        fmt.push('(');
+
+        for input in inputs {
+            fmt.push_str(&input.to_string());
+            fmt.push_str(": {:?},");
+        }
+        fmt.pop(); // Remove the extra comma.
+        fmt.push(')');
+        fmt
+    });
+
     let res = quote! {
-        log::log!(log::Level::Info, #fmt, #items);
+        log::log!(#level, #fmt, #items);
     };
     syn::parse2(res)
 }
