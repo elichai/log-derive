@@ -1,6 +1,6 @@
-use log_derive::logfn;
-use simplelog::{TermLogger, Config};
 use log::LevelFilter;
+use log_derive::*;
+use simplelog::{Config, TermLogger};
 
 // #[logfn(INFO, fmt = "fibonacci() -> {:?}", err = "Error", ok = "Trace", Warn)]
 // fn fibonacci(n: u32) -> std::result::Result<u32, u32> {
@@ -12,7 +12,9 @@ use log::LevelFilter;
 //     }
 // }
 
-#[logfn(INFO, fmt = "fibonacci() -> {}", ok = "Trace")]
+//#[logfn(INFO, fmt = "fibonacci() -> {}", ok = "Trace")]
+#[logfn(Info)]
+#[logfn_inputs(Trace)]
 fn fibonacci(n: u32) -> u32 {
     match n {
         0 => 1,
@@ -20,7 +22,6 @@ fn fibonacci(n: u32) -> u32 {
         _ => fibonacci(n - 1) + fibonacci(n - 2),
     }
 }
-
 
 fn main() {
     TermLogger::init(LevelFilter::Trace, Config::default()).unwrap();

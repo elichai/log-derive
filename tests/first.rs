@@ -1,5 +1,5 @@
-use log_derive::logfn;
-#[logfn(INFO, fmt = "DB: {:?}", ok="debug", err="trace")]
+use log_derive::{logfn, logfn_inputs};
+#[logfn(INFO, fmt = "DB: {:?}", ok = "debug", err = "trace")]
 fn wrapped_function(a: u8, b: &str) {
     let mut test1 = Vec::new();
     let mut test2 = || {
@@ -12,7 +12,7 @@ fn wrapped_function(a: u8, b: &str) {
 struct AAAAAA;
 impl AAAAAA {
     #[logfn(Info)]
-    pub fn yoyoy(&self, a: String, b: u8, c: Vec<u8>) -> Vec<u8> {
+    pub fn yoyoy(&self, _a: String, _b: u8, _c: Vec<u8>) -> Vec<u8> {
         vec![0u8; 8]
     }
 }
@@ -23,40 +23,41 @@ struct E;
 trait Test {
     fn abc(&mut self, err: Tes) -> Result<String, E>;
     fn third(&self, err: &Tes) -> Result<String, E>;
+    fn just_inputs(&self, err: &Tes) -> Result<String, E>;
+    fn both(&self, err: &Tes) -> Result<String, E>;
 }
 
+#[derive(Debug)]
 struct Me(Option<u8>);
+#[derive(Debug)]
 struct Tes(pub bool);
 
 impl Test for Me {
-
-//    #[logfn(Info)]
-    #[logfn(INFO, fmt = "DB: {:?}", ok="debug", err="trace")]
+    #[logfn(INFO, fmt = "DB: {:?}", ok = "debug", err = "trace")]
     fn abc(&mut self, err: Tes) -> Result<String, E> {
         let mut clos = || {
             self.third(&err)?;
             if err.0 {
-                return Err(E)
+                return Err(E);
             } else {
                 self.0 = Some(5);
-                return Ok(String::from("Hi!"))
+                return Ok(String::from("Hi!"));
             }
         };
         let result = clos();
         result
-
     }
 
     #[logfn(Info)]
     fn third(&self, err: &Tes) -> Result<String, E> {
         if err.0 {
-            return Err(E)
+            return Err(E);
         } else {
-            return Ok(String::from("Hi!"))
+            return Ok(String::from("Hi!"));
         }
     }
 
-    #[logfn_inputs]
+    #[logfn_inputs(Debug)]
     fn just_inputs(&self, err: &Tes) -> Result<String, E> {
         if err.0 {
             return Err(E);
@@ -65,7 +66,7 @@ impl Test for Me {
         }
     }
 
-    #[logfn_inputs]
+    #[logfn_inputs(Trace)]
     #[logfn(Info)]
     fn both(&self, err: &Tes) -> Result<String, E> {
         let mut clos = || {
@@ -80,7 +81,6 @@ impl Test for Me {
         result
     }
 }
-
 
 #[test]
 fn works() {
@@ -98,7 +98,6 @@ fn test_inputs() {
     let tes = Tes(false);
     b.just_inputs(&tes).unwrap();
     b.both(&tes).unwrap();
-
 }
 
 #[test]
