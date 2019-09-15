@@ -1,5 +1,5 @@
 # log-derive
-[![Build Status](https://travis-ci.com/elichai/log-derive.svg?branch=master)](https://travis-ci.com/elichai/log-derive)
+[![Build Status](https://travis-ci.org/elichai/log-derive.svg?branch=master)](https://travis-ci.org/elichai/log-derive)
 [![Latest version](https://img.shields.io/crates/v/log-derive.svg)](https://crates.io/crates/log-derive)
 [![Documentation](https://docs.rs/log-derive/badge.svg)](https://docs.rs/log-derive)
 ![License](https://img.shields.io/crates/l/log-derive.svg)

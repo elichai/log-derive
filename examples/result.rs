@@ -2,7 +2,7 @@ use std::fmt;
 
 use log::LevelFilter;
 use log_derive::logfn;
-use simplelog::{Config, TermLogger};
+use simplelog::{Config, TermLogger, TerminalMode};
 
 struct DivisibleBy3Error(u32);
 
@@ -21,7 +21,7 @@ fn not_divisible_by_3(n: u32) -> Result<u32, DivisibleBy3Error> {
 }
 
 fn main() {
-    TermLogger::init(LevelFilter::Trace, Config::default()).unwrap();
+    TermLogger::init(LevelFilter::Trace, Config::default(), TerminalMode::default()).unwrap();
     for x in 0..25 {
         let _ = not_divisible_by_3(x);
     }

@@ -150,7 +150,7 @@ struct InputOptions {
 
 impl FromMeta for InputOptions {
     fn from_list(items: &[NestedMeta]) -> darling::Result<Self> {
-        let mut level;
+        let level;
         let mut fmt = None;
         if items.is_empty() {
             return Err(Error::too_few_items(1));
@@ -158,13 +158,17 @@ impl FromMeta for InputOptions {
 
         match &items[0] {
             NestedMeta::Meta(first) => {
-                if let Meta::Word(ident) = first {
-                    level = ident.clone();
+                if let Meta::Path(path) = first {
+                    if let Some(ident) = path.get_ident() {
+                        level = ident.clone();
+                    } else {
+                        return Err(Error::unexpected_type("first item should be a log level"));
+                    }
                 } else {
                     return Err(Error::unexpected_type("first item should be a log level"));
                 }
             }
-            NestedMeta::Literal(lit) => return Err(Error::unexpected_lit_type(lit)),
+            NestedMeta::Lit(lit) => return Err(Error::unexpected_lit_type(lit)),
         }
 
         if items.len() > 1 {
@@ -198,8 +202,8 @@ impl FromMeta for OutputOptions {
         let mut leading_level = None;
 
         if let NestedMeta::Meta(first) = &items[0] {
-            if let Meta::Word(ident) = first {
-                leading_level = Some(ident.clone());
+            if let Meta::Path(path) = first {
+                leading_level = path.get_ident().cloned();
             }
         }
 
@@ -222,7 +226,7 @@ pub(crate) fn is_result_type(ty: &TypePath) -> bool {
 }
 
 fn check_if_return_result(f: &ItemFn) -> bool {
-    if let ReturnType::Type(_, t) = &f.decl.output {
+    if let ReturnType::Type(_, t) = &f.sig.output {
         return match t.as_ref() {
             Type::Path(path) => is_result_type(path),
             _ => false,
@@ -305,7 +309,7 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
 pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let attr = parse_macro_input!(attr as AttributeArgs);
     let original_fn: ItemFn = parse_macro_input!(item as ItemFn);
-    let fmt_default = original_fn.ident.to_string() + "() => {:?}";
+    let fmt_default = original_fn.sig.ident.to_string() + "() => {:?}";
     let parsed_attributes = match FormattedAttributes::parse_attributes(&attr, &fmt_default) {
         Ok(val) => val,
         Err(err) => {
@@ -356,18 +360,21 @@ pub fn logfn_inputs(attr: proc_macro::TokenStream, item: proc_macro::TokenStream
 }
 
 fn log_fn_inputs(func: &ItemFn, attr: InputOptions) -> syn::Result<Stmt> {
-    let fn_name = func.ident.to_string();
+    let fn_name = func.sig.ident.to_string();
     let inputs: Vec<Ident> = func
-        .decl
+        .sig
         .inputs
         .iter()
         .cloned()
         .map(|arg| match arg {
-            FnArg::SelfRef(arg) => arg.self_token.into(),
-            FnArg::SelfValue(arg) => arg.self_token.into(),
-            FnArg::Captured(arg) => extract_ident_from_pat(arg.pat),
-            FnArg::Inferred(pat) => extract_ident_from_pat(pat),
-            FnArg::Ignored(_) => unimplemented!(),
+            FnArg::Receiver(arg) => arg.self_token.into(),
+            FnArg::Typed(pat_type) => {
+                if let Pat::Ident(ident) = *pat_type.pat {
+                    ident.ident
+                } else {
+                    unimplemented!()
+                }
+            }
         })
         .collect();
 
@@ -392,14 +399,6 @@ fn log_fn_inputs(func: &ItemFn, attr: InputOptions) -> syn::Result<Stmt> {
         log::log!(#level, #fmt, #items);
     };
     syn::parse2(res)
-}
-
-fn extract_ident_from_pat(pat: Pat) -> Ident {
-    if let Pat::Ident(ident) = pat {
-        ident.ident
-    } else {
-        unimplemented!()
-    }
 }
 
 #[cfg(test)]

@@ -6,20 +6,20 @@ authors = ["Elichai <elichai.turkel@gmail.com>"]
 repository = "https://github.com/elichai/log-derive"
 readme = "README.md"
 edition = "2018"
-description = "Procedural Macro for logging result of a function"
+description = "Procedural Macros for logging the result and inputs of a function"
 categories = ["development-tools::debugging"]
 keywords = ["log", "macro", "derive", "logging", "function"]
 
 [dependencies]
-darling = "0.9.0"
-proc-macro2 = "0.4"
+darling = "0.10.0"
+proc-macro2 = "1.0.3"
 #syn = { version = "0.15", features = ["full", "extra-traits"] } # -> For development
-syn = { version = "0.15", features = ["full"] }
-quote = "0.6"
+syn = { version = "1.0.5", features = ["full"] }
+quote = "1.0.2"
 log = "0.4"
 
 [dev-dependencies]
-simplelog = "0.5"
+simplelog = "0.7"
 
 [badges]
 travis-ci = { repository = "elichai/log-derive" }
