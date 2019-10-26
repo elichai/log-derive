@@ -12,7 +12,7 @@ impl fmt::Display for DivisibleBy3Error {
     }
 }
 
-#[logfn(fmt = "not_divisible_by_3() -> {}", ok = "info", err = "error")]
+#[logfn(fmt = "not_divisible_by_3() -> {}", ok = "info", err = "error", log_ts = true)]
 fn not_divisible_by_3(n: u32) -> Result<u32, DivisibleBy3Error> {
     match n % 3 {
         0 => Err(DivisibleBy3Error(n)),

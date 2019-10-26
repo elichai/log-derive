@@ -108,12 +108,24 @@ impl FormattedAttributes {
     fn get_ok_err_streams(att: &OutputOptions, fmt_default: &str) -> Self {
         let ok_log = att.ok_log();
         let err_log = att.err_log();
-        let fmt = att.fmt().unwrap_or(fmt_default);
+        let fmt_tmp = att.fmt().unwrap_or(fmt_default);
+        let fmt;
+        if att.log_ts() {
+            fmt = fmt_tmp.to_owned() + &", ts={:#?}";
+        }
+        else{
+            fmt=fmt_tmp.to_owned();
+        }
 
         let ok_expr = match ok_log {
             Some(loglevel) => {
                 let log_token = get_logger_token(&loglevel);
-                quote! {log::log!(#log_token, #fmt, result);}
+                if att.log_ts() {
+                    quote! {log::log!(#log_token, #fmt, result, ts); }
+                }
+                else{
+                    quote! {log::log!(#log_token, #fmt, result); }
+                }
             }
             None => quote! {()},
         };
@@ -121,7 +133,12 @@ impl FormattedAttributes {
         let err_expr = match err_log {
             Some(loglevel) => {
                 let log_token = get_logger_token(&loglevel);
-                quote! {log::log!(#log_token, #fmt, err);}
+                if att.log_ts() {
+                    quote! {log::log!(#log_token, #fmt, err, ts); }
+                }
+                else{
+                    quote! {log::log!(#log_token, #fmt, err); }
+                }
             }
             None => quote! {()},
         };
@@ -135,6 +152,7 @@ struct OutputNamedOptions {
     ok: Option<Ident>,
     err: Option<Ident>,
     fmt: Option<String>,
+    log_ts: Option<bool>
 }
 
 struct OutputOptions {
@@ -186,6 +204,10 @@ impl OutputOptions {
 
     pub fn err_log(&self) -> Option<&Ident> {
         self.named.err.as_ref().or_else(|| self.leading_level.as_ref())
+    }
+
+    pub fn log_ts(&self) -> bool {
+        self.named.log_ts.unwrap_or(true)
     }
 
     pub fn fmt(&self) -> Option<&str> {
@@ -273,15 +295,22 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
     let code = if result {
         quote! {
             fn temp() {
-                (#closure)()
-                    .map(|result| { #ok_expr; result })
-                    .map_err(|err| { #err_expr; err })
+                let begin = std::time::SystemTime::now();
+                let result = (#closure)();
+                let duration_0 = std::time::Duration::new(0, 0);
+                let ts = std::time::SystemTime::now().duration_since(begin).unwrap_or(duration_0);
+                let result = result.map(|result| { #ok_expr; result })
+                    .map_err(|err| { #err_expr; err });
+                result
             }
         }
     } else {
         quote! {
             fn temp() {
+                let begin = std::time::SystemTime::now();
                 let result = (#closure)();
+                let duration_0 = std::time::Duration::new(0, 0);
+                let ts = std::time::SystemTime::now().duration_since(begin).unwrap_or(duration_0);
                 #ok_expr;
                 result
             }
@@ -310,7 +339,7 @@ pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> pr
     let attr = parse_macro_input!(attr as AttributeArgs);
     let original_fn: ItemFn = parse_macro_input!(item as ItemFn);
     let fmt_default = original_fn.sig.ident.to_string() + "() => {:?}";
-    let parsed_attributes = match FormattedAttributes::parse_attributes(&attr, &fmt_default) {
+    let parsed_attributes: FormattedAttributes = match FormattedAttributes::parse_attributes(&attr, &fmt_default) {
         Ok(val) => val,
         Err(err) => {
             return err.write_errors().into();
