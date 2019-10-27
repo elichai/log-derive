@@ -111,19 +111,14 @@ impl FormattedAttributes {
         let err_log = att.err_log();
         let fmt_tmp = att.fmt().unwrap_or(fmt_default);
         let log_ts = att.log_ts();
-        let fmt = if log_ts {
-            fmt_tmp.to_owned() + ", ts={:#?}"
-        } else {
-            fmt_tmp.to_owned()
-        };
+        let fmt = if log_ts { fmt_tmp.to_owned() + ", ts={:#?}" } else { fmt_tmp.to_owned() };
 
         let ok_expr = match ok_log {
             Some(loglevel) => {
                 let log_token = get_logger_token(&loglevel);
                 if log_ts {
                     quote! {log::log!(#log_token, #fmt, result, ts); }
-                }
-                else{
+                } else {
                     quote! {log::log!(#log_token, #fmt, result); }
                 }
             }
@@ -135,8 +130,7 @@ impl FormattedAttributes {
                 let log_token = get_logger_token(&loglevel);
                 if log_ts {
                     quote! {log::log!(#log_token, #fmt, err, ts); }
-                }
-                else{
+                } else {
                     quote! {log::log!(#log_token, #fmt, err); }
                 }
             }
@@ -152,7 +146,7 @@ struct OutputNamedOptions {
     ok: Option<Ident>,
     err: Option<Ident>,
     fmt: Option<String>,
-    log_ts: Option<bool>
+    log_ts: Option<bool>,
 }
 
 struct OutputOptions {
@@ -315,8 +309,7 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
                 }
             }
         }
-    }
-    else {
+    } else {
         if result {
             quote! {
                 fn temp() {

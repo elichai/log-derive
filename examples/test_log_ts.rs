@@ -5,7 +5,7 @@ use std::thread::sleep;
 use std::time::Duration;
 
 #[logfn(DEBUG)]
-fn func1() ->i32 {
+fn func1() -> i32 {
     sleep(Duration::from_millis(10));
     log::info!("func1");
     5
