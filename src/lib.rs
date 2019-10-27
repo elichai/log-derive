@@ -98,6 +98,7 @@ use syn::{
 struct FormattedAttributes {
     ok_expr: TokenStream,
     err_expr: TokenStream,
+    log_ts: bool,
 }
 
 impl FormattedAttributes {
@@ -109,18 +110,17 @@ impl FormattedAttributes {
         let ok_log = att.ok_log();
         let err_log = att.err_log();
         let fmt_tmp = att.fmt().unwrap_or(fmt_default);
-        let fmt;
-        if att.log_ts() {
-            fmt = fmt_tmp.to_owned() + &", ts={:#?}";
-        }
-        else{
-            fmt=fmt_tmp.to_owned();
-        }
+        let log_ts = att.log_ts();
+        let fmt = if log_ts {
+            fmt_tmp.to_owned() + ", ts={:#?}"
+        } else {
+            fmt_tmp.to_owned()
+        };
 
         let ok_expr = match ok_log {
             Some(loglevel) => {
                 let log_token = get_logger_token(&loglevel);
-                if att.log_ts() {
+                if log_ts {
                     quote! {log::log!(#log_token, #fmt, result, ts); }
                 }
                 else{
@@ -133,7 +133,7 @@ impl FormattedAttributes {
         let err_expr = match err_log {
             Some(loglevel) => {
                 let log_token = get_logger_token(&loglevel);
-                if att.log_ts() {
+                if log_ts {
                     quote! {log::log!(#log_token, #fmt, err, ts); }
                 }
                 else{
@@ -142,7 +142,7 @@ impl FormattedAttributes {
             }
             None => quote! {()},
         };
-        FormattedAttributes { ok_expr, err_expr }
+        FormattedAttributes { ok_expr, err_expr, log_ts }
     }
 }
 
@@ -207,7 +207,7 @@ impl OutputOptions {
     }
 
     pub fn log_ts(&self) -> bool {
-        self.named.log_ts.unwrap_or(true)
+        self.named.log_ts.unwrap_or(false)
     }
 
     pub fn fmt(&self) -> Option<&str> {
@@ -291,28 +291,48 @@ fn replace_function_headers(original: ItemFn, new: &mut ItemFn) {
 }
 
 fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, result: bool) -> Result<ItemFn> {
-    let FormattedAttributes { ok_expr, err_expr } = expressions;
-    let code = if result {
-        quote! {
-            fn temp() {
-                let begin = std::time::SystemTime::now();
-                let result = (#closure)();
-                let duration_0 = std::time::Duration::new(0, 0);
-                let ts = std::time::SystemTime::now().duration_since(begin).unwrap_or(duration_0);
-                let result = result.map(|result| { #ok_expr; result })
-                    .map_err(|err| { #err_expr; err });
-                result
+    let FormattedAttributes { ok_expr, err_expr, log_ts } = expressions;
+    let code = if *log_ts {
+        if result {
+            quote! {
+                fn temp() {
+                    let instant = std::time::Instant::now();
+                    let result = (#closure)();
+                    let ts = instant.elapsed();
+                    let result = result.map(|result| { #ok_expr; result })
+                        .map_err(|err| { #err_expr; err });
+                    result
+                }
+            }
+        } else {
+            quote! {
+                fn temp() {
+                    let instant = std::time::Instant::now();
+                    let result = (#closure)();
+                    let ts = instant.elapsed();
+                    #ok_expr;
+                    result
+                }
             }
         }
-    } else {
-        quote! {
-            fn temp() {
-                let begin = std::time::SystemTime::now();
-                let result = (#closure)();
-                let duration_0 = std::time::Duration::new(0, 0);
-                let ts = std::time::SystemTime::now().duration_since(begin).unwrap_or(duration_0);
-                #ok_expr;
-                result
+    }
+    else {
+        if result {
+            quote! {
+                fn temp() {
+                    let result = (#closure)();
+                    let result = result.map(|result| { #ok_expr; result })
+                        .map_err(|err| { #err_expr; err });
+                    result
+                }
+            }
+        } else {
+            quote! {
+                fn temp() {
+                    let result = (#closure)();
+                    #ok_expr;
+                    result
+                }
             }
         }
     };
