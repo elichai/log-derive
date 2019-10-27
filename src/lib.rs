@@ -309,8 +309,7 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
                 }
             }
         }
-    } else {
-        if result {
+    } else if result {
             quote! {
                 fn temp() {
                     let result = (#closure)();
@@ -327,8 +326,7 @@ fn generate_function(closure: &ExprClosure, expressions: &FormattedAttributes, r
                     result
                 }
             }
-        }
-    };
+        };
 
     syn::parse2(code)
 }
