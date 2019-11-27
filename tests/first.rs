@@ -69,7 +69,7 @@ impl Test for Me {
     #[logfn_inputs(Trace)]
     #[logfn(Info)]
     fn both(&self, err: &Tes) -> Result<String, E> {
-        let mut clos = || {
+        let clos = || {
             self.third(&err)?;
             if err.0 {
                 return Err(E);

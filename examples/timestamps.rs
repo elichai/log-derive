@@ -28,3 +28,9 @@ fn main() {
     func2();
     func3();
 }
+
+#[cfg(test)]
+#[test]
+fn test_main() {
+    main();
+}
