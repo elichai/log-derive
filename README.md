@@ -111,3 +111,7 @@ fn fibonacci(n: u32) -> u32 {
 ```
 
 Of course the `log!` macro will be expanded too and it will be a bit more messy.
+
+## Note
+The `log_ts` feature will fail your compilation in a `no-std` enviroment. 
+it can only be used where `std` is available. (as it uses `std::time::Instant`)
