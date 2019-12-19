@@ -111,6 +111,7 @@ struct FormattedAttributes {
     ok_expr: TokenStream,
     err_expr: TokenStream,
     log_ts: bool,
+    contained_ok_or_err: bool,
 }
 
 impl FormattedAttributes {
@@ -119,6 +120,7 @@ impl FormattedAttributes {
     }
 
     fn get_ok_err_streams(att: OutputOptions, fmt_default: String) -> Self {
+        let contained_ok_or_err = att.contains_ok_or_err();
         let log_ts = att.log_ts();
         let ok_log = att.ok_log();
         let err_log = att.err_log();
@@ -150,7 +152,7 @@ impl FormattedAttributes {
             }
             None => quote! {()},
         };
-        FormattedAttributes { ok_expr, err_expr, log_ts }
+        FormattedAttributes { ok_expr, err_expr, log_ts, contained_ok_or_err }
     }
 }
 
@@ -212,6 +214,10 @@ impl OutputOptions {
 
     pub fn err_log(&self) -> Option<&Ident> {
         self.named.err.as_ref().or_else(|| self.leading_level.as_ref())
+    }
+
+    pub fn contains_ok_or_err(&self) -> bool {
+        self.named.ok.is_some() || self.named.err.is_some()
     }
 
     pub fn log_ts(&self) -> bool {
@@ -299,7 +305,8 @@ fn replace_function_headers(original: ItemFn, new: &mut ItemFn) {
 }
 
 fn generate_function(closure: &ExprClosure, expressions: FormattedAttributes, result: bool) -> Result<ItemFn> {
-    let FormattedAttributes { ok_expr, err_expr, log_ts } = expressions;
+    let FormattedAttributes { ok_expr, err_expr, log_ts, contained_ok_or_err } = expressions;
+    let result = result || contained_ok_or_err;
     let code = if log_ts {
         if result {
             quote! {
