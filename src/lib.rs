@@ -32,10 +32,7 @@
 //!
 //! ## Examples
 //! ```rust
-//! #[macro_use]
-//! extern crate log_derive;
-//! #[macro_use]
-//! extern crate log;
+//! use log_derive::{logfn, logfn_inputs};
 //!
 //! # #[derive(Debug)]
 //! struct Error;
@@ -47,8 +44,8 @@
 //! #[logfn(Warn)]
 //! #[logfn_inputs(Info, fmt = "Checking if {:?} is alive")]
 //! fn is_alive(person: &Person) -> Status {
-//!     # use self::Response::*;
-//!     # use self::Status::*;
+//!     # use Response::*;
+//!     # use Status::*;
 //!    match person.ping() {
 //!        Pong => Status::Alive,
 //!        Timeout => if person.is_awake() {
@@ -86,7 +83,6 @@
 //!     }
 //! }
 //!
-//! # fn main() {}
 //! # enum Response {Pong, Timeout}
 //! # #[derive(Debug)]
 //! # struct Person;
