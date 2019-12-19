@@ -249,7 +249,7 @@ impl FromMeta for OutputOptions {
 /// from specific modules.
 pub(crate) fn is_result_type(ty: &TypePath) -> bool {
     if let Some(segment) = ty.path.segments.iter().last() {
-        segment.ident == "Result"
+        segment.ident.to_string().ends_with("Result")
     } else {
         false
     }
@@ -459,8 +459,15 @@ mod tests {
 
     use super::is_result_type;
 
+    enum CustomError {
+        Test,
+    }
+
+    type CustomResult<T> = Result<T, CustomError>;
+
     #[test]
     fn result_type() {
+        assert!(is_result_type(&parse_quote!(CustomResult<T, E>)));
         assert!(is_result_type(&parse_quote!(Result<T, E>)));
         assert!(is_result_type(&parse_quote!(std::result::Result<T, E>)));
         assert!(is_result_type(&parse_quote!(fmt::Result)));
