@@ -67,21 +67,36 @@ fn test_log(a: u8) -> String {
 # Output
 The output of the [fibonacci](./examples/fibonacci.rs) example:
 ```
-14:55:41 [INFO] fibonacci() -> 1
-14:55:41 [INFO] fibonacci() -> 1
-14:55:41 [INFO] fibonacci() -> 2
-14:55:41 [INFO] fibonacci() -> 1
-14:55:41 [INFO] fibonacci() -> 3
-14:55:41 [INFO] fibonacci() -> 1
-14:55:41 [INFO] fibonacci() -> 1
-14:55:41 [INFO] fibonacci() -> 2
-14:55:41 [INFO] fibonacci() -> 5
-14:55:41 [INFO] fibonacci() -> 1
-14:55:41 [INFO] fibonacci() -> 1
-14:55:41 [INFO] fibonacci() -> 2
-14:55:41 [INFO] fibonacci() -> 1
-14:55:41 [INFO] fibonacci() -> 3
-14:55:41 [INFO] fibonacci() -> 8
+17:15:24 [TRACE] (1) fibonacci: [examples/fibonacci.rs:16] fibonacci(n: 5)
+17:15:24 [TRACE] (1) fibonacci: [examples/fibonacci.rs:16] fibonacci(n: 4)
+17:15:24 [TRACE] (1) fibonacci: [examples/fibonacci.rs:16] fibonacci(n: 3)
+17:15:24 [TRACE] (1) fibonacci: [examples/fibonacci.rs:16] fibonacci(n: 2)
+17:15:24 [TRACE] (1) fibonacci: [examples/fibonacci.rs:16] fibonacci(n: 1)
+17:15:24 [ INFO] fibonacci() -> 1
+17:15:24 [TRACE] (1) fibonacci: [examples/fibonacci.rs:16] fibonacci(n: 0)
+17:15:24 [ INFO] fibonacci() -> 1
+17:15:24 [ INFO] fibonacci() -> 2
+17:15:24 [TRACE] (1) fibonacci: [examples/fibonacci.rs:16] fibonacci(n: 1)
+17:15:24 [ INFO] fibonacci() -> 1
+17:15:24 [ INFO] fibonacci() -> 3
+17:15:24 [TRACE] (1) fibonacci: [examples/fibonacci.rs:16] fibonacci(n: 2)
+17:15:24 [TRACE] (1) fibonacci: [examples/fibonacci.rs:16] fibonacci(n: 1)
+17:15:24 [ INFO] fibonacci() -> 1
+17:15:24 [TRACE] (1) fibonacci: [examples/fibonacci.rs:16] fibonacci(n: 0)
+17:15:24 [ INFO] fibonacci() -> 1
+17:15:24 [ INFO] fibonacci() -> 2
+17:15:24 [ INFO] fibonacci() -> 5
+17:15:24 [TRACE] (1) fibonacci: [examples/fibonacci.rs:16] fibonacci(n: 3)
+17:15:24 [TRACE] (1) fibonacci: [examples/fibonacci.rs:16] fibonacci(n: 2)
+17:15:24 [TRACE] (1) fibonacci: [examples/fibonacci.rs:16] fibonacci(n: 1)
+17:15:24 [ INFO] fibonacci() -> 1
+17:15:24 [TRACE] (1) fibonacci: [examples/fibonacci.rs:16] fibonacci(n: 0)
+17:15:24 [ INFO] fibonacci() -> 1
+17:15:24 [ INFO] fibonacci() -> 2
+17:15:24 [TRACE] (1) fibonacci: [examples/fibonacci.rs:16] fibonacci(n: 1)
+17:15:24 [ INFO] fibonacci() -> 1
+17:15:24 [ INFO] fibonacci() -> 3
+17:15:24 [ INFO] fibonacci() -> 8
 ```
 
 If you expand the output of the `#[logfn]` macro the resulting code will look something like this:
