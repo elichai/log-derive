@@ -1,5 +1,6 @@
 use log_derive::{logfn, logfn_inputs};
-#[logfn(INFO, fmt = "DB: {:?}", ok = "debug", err = "trace")]
+
+#[logfn(INFO, fmt = "wrapper_function returned {:?}")]
 fn wrapped_function(a: u8, b: &str) {
     let mut test1 = Vec::new();
     let mut test2 = || {
