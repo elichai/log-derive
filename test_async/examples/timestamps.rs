@@ -1,3 +1,5 @@
+#![feature(async_closure)]
+
 use log::LevelFilter;
 use log_derive::logfn;
 use simplelog::{Config, TermLogger, TerminalMode};
