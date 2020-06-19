@@ -16,7 +16,7 @@ script:
        [ ${TRAVIS_RUST_VERSION} != "nightly-2019-05-22-x86_64-unknown-linux-gnu" ] &&
        [ ${TRAVIS_RUST_VERSION} != "nightly-2019-08-01-x86_64-unknown-linux-gnu" ];
     then
-      cd test_async; cargo test --examples
+      cd test_async; cargo test --examples;
     fi
 
 before_script:
