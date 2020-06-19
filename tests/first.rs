@@ -83,16 +83,6 @@ impl Test for Me {
     }
 }
 
-#[logfn_inputs(Trace)]
-#[logfn(Info)]
-async fn async_func(err: &Tes) -> Result<String, E> {
-    if err.0 {
-        return Err(E);
-    } else {
-        return Ok(String::from("Hi!"));
-    }
-}
-
 #[test]
 fn works() {
     wrapped_function(5, "cool!");
@@ -120,11 +110,4 @@ fn fail() {
     let mut b = Me(None);
     let tes = Tes(true);
     b.abc(tes).unwrap();
-}
-
-#[test]
-fn test_async() {
-    let mut rt = tokio::runtime::Runtime::new().unwrap();
-    let tes = Tes(false);
-    let _ = rt.block_on(async_func(&tes));
 }
