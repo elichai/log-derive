@@ -99,7 +99,7 @@ use quote::{quote, ToTokens};
 
 use syn::punctuated::Punctuated;
 use syn::{
-    parse_macro_input, spanned::Spanned, token, AttributeArgs, Expr, ExprBlock, ExprClosure, FnArg, Ident, ItemFn, Meta, NestedMeta,
+    parse_macro_input, parse_quote, token, AttributeArgs, Expr, ExprBlock, FnArg, Ident, ItemFn, Meta, NestedMeta,
     Pat, Result, ReturnType, Stmt, Type, TypePath,
 };
 
@@ -277,21 +277,8 @@ fn get_logger_token(att: &Ident) -> TokenStream {
     quote!(log::Level::#att_str)
 }
 
-fn make_closure(original: &ItemFn) -> ExprClosure {
-    let body =
-        Box::new(Expr::Block(ExprBlock { attrs: Default::default(), label: Default::default(), block: *original.block.clone() }));
-
-    ExprClosure {
-        attrs: Default::default(),
-        asyncness: Default::default(),
-        movability: Default::default(),
-        capture: Some(token::Move { span: original.span() }),
-        or1_token: Default::default(),
-        inputs: Default::default(),
-        or2_token: Default::default(),
-        output: ReturnType::Default,
-        body,
-    }
+fn make_expr(original: &ItemFn) -> Expr {
+    Expr::Block(ExprBlock { attrs: Default::default(), label: Default::default(), block: *original.block.clone() })
 }
 
 fn replace_function_headers(original: ItemFn, new: &mut ItemFn) {
@@ -300,15 +287,20 @@ fn replace_function_headers(original: ItemFn, new: &mut ItemFn) {
     new.block = block;
 }
 
-fn generate_function(closure: &ExprClosure, expressions: FormattedAttributes, result: bool) -> Result<ItemFn> {
+fn generate_function(result_type: &ReturnType, expr: &Expr, expressions: FormattedAttributes, result: bool) -> Result<ItemFn> {
     let FormattedAttributes { ok_expr, err_expr, log_ts, contained_ok_or_err } = expressions;
+    let nil = parse_quote!{ () };
+    let result_type: &syn::Type = match result_type {
+        ReturnType::Type(_, the_type) => &**the_type,
+        ReturnType::Default => &nil,
+    };
     let result = result || contained_ok_or_err;
     let code = if log_ts {
         if result {
             quote! {
                 fn temp() {
                     let instant = std::time::Instant::now();
-                    let result = (#closure)();
+                    let result: #result_type = (#expr);
                     let ts = instant.elapsed();
                     result.map(|result| { #ok_expr; result })
                         .map_err(|err| { #err_expr; err })
@@ -318,7 +310,7 @@ fn generate_function(closure: &ExprClosure, expressions: FormattedAttributes, re
             quote! {
                 fn temp() {
                     let instant = std::time::Instant::now();
-                    let result = (#closure)();
+                    let result: #result_type = (#expr);
                     let ts = instant.elapsed();
                     #ok_expr;
                     result
@@ -328,7 +320,7 @@ fn generate_function(closure: &ExprClosure, expressions: FormattedAttributes, re
     } else if result {
         quote! {
             fn temp() {
-                let result = (#closure)();
+                let result: #result_type = (#expr);
                 result.map(|result| { #ok_expr; result })
                     .map_err(|err| { #err_expr; err })
             }
@@ -336,7 +328,7 @@ fn generate_function(closure: &ExprClosure, expressions: FormattedAttributes, re
     } else {
         quote! {
             fn temp() {
-                let result = (#closure)();
+                let result: #result_type = (#expr);
                 #ok_expr;
                 result
             }
@@ -371,9 +363,9 @@ pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> pr
             return err.write_errors().into();
         }
     };
-    let closure = make_closure(&original_fn);
+    let expr = make_expr(&original_fn);
     let is_result = check_if_return_result(&original_fn);
-    let mut new_fn = generate_function(&closure, parsed_attributes, is_result).expect("Failed Generating Function");
+    let mut new_fn = generate_function(&original_fn.sig.output, &expr, parsed_attributes, is_result).expect("Failed Generating Function");
     replace_function_headers(original_fn, &mut new_fn);
     new_fn.into_token_stream().into()
 }
