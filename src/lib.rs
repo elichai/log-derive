@@ -99,8 +99,8 @@ use quote::{quote, ToTokens};
 
 use syn::punctuated::Punctuated;
 use syn::{
-    parse_macro_input, parse_quote, token, AttributeArgs, Expr, ExprBlock, FnArg, Ident, ItemFn, Meta, NestedMeta,
-    Pat, Result, ReturnType, Stmt, Type, TypePath,
+    parse_macro_input, parse_quote, token, AttributeArgs, Expr, ExprBlock, FnArg, Ident, ItemFn, Meta, NestedMeta, Pat, Result,
+    ReturnType, Stmt, Type, TypePath,
 };
 
 struct FormattedAttributes {
@@ -289,7 +289,7 @@ fn replace_function_headers(original: ItemFn, new: &mut ItemFn) {
 
 fn generate_function(result_type: &ReturnType, expr: &Expr, expressions: FormattedAttributes, result: bool) -> Result<ItemFn> {
     let FormattedAttributes { ok_expr, err_expr, log_ts, contained_ok_or_err } = expressions;
-    let nil = parse_quote!{ () };
+    let nil = parse_quote! { () };
     let result_type: &syn::Type = match result_type {
         ReturnType::Type(_, the_type) => &**the_type,
         ReturnType::Default => &nil,
@@ -365,7 +365,8 @@ pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> pr
     };
     let expr = make_expr(&original_fn);
     let is_result = check_if_return_result(&original_fn);
-    let mut new_fn = generate_function(&original_fn.sig.output, &expr, parsed_attributes, is_result).expect("Failed Generating Function");
+    let mut new_fn =
+        generate_function(&original_fn.sig.output, &expr, parsed_attributes, is_result).expect("Failed Generating Function");
     replace_function_headers(original_fn, &mut new_fn);
     new_fn.into_token_stream().into()
 }
