@@ -326,8 +326,7 @@ fn generate_function(f: &ItemFn, closure: &ExprClosure, expressions: FormattedAt
                     }
                 }
             }
-        } else {
-            if f.sig.asyncness.is_none() {
+        } else if f.sig.asyncness.is_none() {
                 quote! {
                     fn temp() {
                         let instant = std::time::Instant::now();
@@ -337,15 +336,14 @@ fn generate_function(f: &ItemFn, closure: &ExprClosure, expressions: FormattedAt
                         result
                     }
                 }
-            } else {
-                quote! {
-                    async fn temp() {
-                        let instant = std::time::Instant::now();
-                        let result = (#closure)().await;
-                        let ts = instant.elapsed();
-                        #ok_expr;
-                        result
-                    }
+        } else {
+            quote! {
+                async fn temp() {
+                    let instant = std::time::Instant::now();
+                    let result = (#closure)().await;
+                    let ts = instant.elapsed();
+                    #ok_expr;
+                    result
                 }
             }
         }
@@ -367,8 +365,7 @@ fn generate_function(f: &ItemFn, closure: &ExprClosure, expressions: FormattedAt
                 }
             }
         }
-    } else {
-        if f.sig.asyncness.is_none() {
+    } else if f.sig.asyncness.is_none() {
             quote! {
                 fn temp() {
                     let result = (#closure)();
@@ -376,13 +373,12 @@ fn generate_function(f: &ItemFn, closure: &ExprClosure, expressions: FormattedAt
                     result
                 }
             }
-        } else {
-            quote! {
-                async fn temp() {
-                    let result = (#closure)().await;
-                    #ok_expr;
-                    result
-                }
+    } else {
+        quote! {
+            async fn temp() {
+                let result = (#closure)().await;
+                #ok_expr;
+                result
             }
         }
     };
