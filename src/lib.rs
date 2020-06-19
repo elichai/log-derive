@@ -100,8 +100,19 @@ use quote::{quote, ToTokens};
 use syn::punctuated::Punctuated;
 use syn::{
     parse_macro_input, spanned::Spanned, token, AttributeArgs, Expr, ExprBlock, ExprClosure, FnArg, Ident, ItemFn, Meta, NestedMeta,
-    Pat, Result, ReturnType, Stmt, Type, TypePath,
+    Pat, ReturnType, Stmt, Type, TypePath,
 };
+
+mod generate_function;
+
+#[cfg(feature = "async")]
+mod generate_function_async;
+
+#[cfg(feature = "async")]
+use generate_function_async::generate_function;
+
+#[cfg(not(feature = "async"))]
+use crate::generate_function::generate_function;
 
 struct FormattedAttributes {
     ok_expr: TokenStream,
@@ -298,92 +309,6 @@ fn replace_function_headers(original: ItemFn, new: &mut ItemFn) {
     let block = new.block.clone();
     *new = original;
     new.block = block;
-}
-
-fn generate_function(f: &ItemFn, closure: &ExprClosure, expressions: FormattedAttributes, result: bool) -> Result<ItemFn> {
-    let FormattedAttributes { ok_expr, err_expr, log_ts, contained_ok_or_err } = expressions;
-    let result = result || contained_ok_or_err;
-    let code = if log_ts {
-        if result {
-            if f.sig.asyncness.is_none() {
-                quote! {
-                    fn temp() {
-                        let instant = std::time::Instant::now();
-                        let result = (#closure)();
-                        let ts = instant.elapsed();
-                        result.map(|result| { #ok_expr; result })
-                            .map_err(|err| { #err_expr; err })
-                    }
-                }
-            } else {
-                quote! {
-                    async fn temp() {
-                        let instant = std::time::Instant::now();
-                        let result = (#closure)().await;
-                        let ts = instant.elapsed();
-                        result.map(|result| { #ok_expr; result })
-                            .map_err(|err| { #err_expr; err })
-                    }
-                }
-            }
-        } else if f.sig.asyncness.is_none() {
-                quote! {
-                    fn temp() {
-                        let instant = std::time::Instant::now();
-                        let result = (#closure)();
-                        let ts = instant.elapsed();
-                        #ok_expr;
-                        result
-                    }
-                }
-        } else {
-            quote! {
-                async fn temp() {
-                    let instant = std::time::Instant::now();
-                    let result = (#closure)().await;
-                    let ts = instant.elapsed();
-                    #ok_expr;
-                    result
-                }
-            }
-        }
-    } else if result {
-        if f.sig.asyncness.is_none() {
-            quote! {
-                fn temp() {
-                    let result = (#closure)();
-                    result.map(|result| { #ok_expr; result })
-                        .map_err(|err| { #err_expr; err })
-                }
-            }
-        } else {
-            quote! {
-                async fn temp() {
-                    let result = (#closure)().await;
-                    result.map(|result| { #ok_expr; result })
-                        .map_err(|err| { #err_expr; err })
-                }
-            }
-        }
-    } else if f.sig.asyncness.is_none() {
-            quote! {
-                fn temp() {
-                    let result = (#closure)();
-                    #ok_expr;
-                    result
-                }
-            }
-    } else {
-        quote! {
-            async fn temp() {
-                let result = (#closure)().await;
-                #ok_expr;
-                result
-            }
-        }
-    };
-
-    syn::parse2(code)
 }
 
 /// Logs the result of the function it's above.
