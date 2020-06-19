@@ -301,9 +301,12 @@ fn generate_function(result_type: &ReturnType, expr: &Expr, expressions: Formatt
                 fn temp() {
                     let instant = std::time::Instant::now();
                     let result: #result_type = (#expr);
-                    let ts = instant.elapsed();
-                    result.map(|result| { #ok_expr; result })
-                        .map_err(|err| { #err_expr; err })
+                    #[allow(unreachable_code)]
+                    {
+                        let ts = instant.elapsed();
+                        result.map(|result| { #ok_expr; result })
+                            .map_err(|err| { #err_expr; err })
+                    }
                 }
             }
         } else {
@@ -312,8 +315,11 @@ fn generate_function(result_type: &ReturnType, expr: &Expr, expressions: Formatt
                     let instant = std::time::Instant::now();
                     let result: #result_type = (#expr);
                     let ts = instant.elapsed();
-                    #ok_expr;
-                    result
+                    #[allow(unreachable_code)]
+                    {
+                        #ok_expr;
+                        result
+                    }
                 }
             }
         }
@@ -321,16 +327,22 @@ fn generate_function(result_type: &ReturnType, expr: &Expr, expressions: Formatt
         quote! {
             fn temp() {
                 let result: #result_type = (#expr);
-                result.map(|result| { #ok_expr; result })
-                    .map_err(|err| { #err_expr; err })
+                #[allow(unreachable_code)]
+                {
+                    result.map(|result| { #ok_expr; result })
+                        .map_err(|err| { #err_expr; err })
+                }
             }
         }
     } else {
         quote! {
             fn temp() {
                 let result: #result_type = (#expr);
-                #ok_expr;
-                result
+                #[allow(unreachable_code)]
+                {
+                    #ok_expr;
+                    result
+                }
             }
         }
     };
