@@ -336,9 +336,9 @@ pub fn logfn(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> pr
             return err.write_errors().into();
         }
     };
-    let expr = make_closure(&original_fn);
+    let closure = make_closure(&original_fn);
     let is_result = check_if_return_result(&original_fn);
-    let mut new_fn = generate_function(&original_fn, &expr, parsed_attributes, is_result).expect("Failed Generating Function");
+    let mut new_fn = generate_function(&original_fn, &closure, parsed_attributes, is_result).expect("Failed Generating Function");
     replace_function_headers(original_fn, &mut new_fn);
     new_fn.into_token_stream().into()
 }
