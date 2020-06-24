@@ -99,9 +99,20 @@ use quote::{quote, ToTokens};
 
 use syn::punctuated::Punctuated;
 use syn::{
-    parse_macro_input, spanned::Spanned, token, AttributeArgs, Expr, ExprBlock, ExprClosure, FnArg, Ident, ItemFn, Meta, NestedMeta,
-    Pat, Result, ReturnType, Stmt, Type, TypePath,
+    parse_macro_input, token, AttributeArgs, FnArg, Ident, ItemFn, Meta, NestedMeta, Pat, Result, ReturnType, Stmt, Type, TypePath,
 };
+
+#[cfg(feature = "async")]
+mod async_closure;
+
+#[cfg(feature = "async")]
+use async_closure::make_closure;
+
+#[cfg(not(feature = "async"))]
+mod non_async_closure;
+
+#[cfg(not(feature = "async"))]
+use non_async_closure::make_closure;
 
 struct FormattedAttributes {
     ok_expr: TokenStream,
@@ -277,30 +288,13 @@ fn get_logger_token(att: &Ident) -> TokenStream {
     quote!(log::Level::#att_str)
 }
 
-fn make_closure(original: &ItemFn) -> ExprClosure {
-    let body =
-        Box::new(Expr::Block(ExprBlock { attrs: Default::default(), label: Default::default(), block: *original.block.clone() }));
-
-    ExprClosure {
-        attrs: Default::default(),
-        asyncness: Default::default(),
-        movability: Default::default(),
-        capture: Some(token::Move { span: original.span() }),
-        or1_token: Default::default(),
-        inputs: Default::default(),
-        or2_token: Default::default(),
-        output: ReturnType::Default,
-        body,
-    }
-}
-
 fn replace_function_headers(original: ItemFn, new: &mut ItemFn) {
     let block = new.block.clone();
     *new = original;
     new.block = block;
 }
 
-fn generate_function(closure: &ExprClosure, expressions: FormattedAttributes, result: bool) -> Result<ItemFn> {
+fn generate_function(closure: &TokenStream, expressions: FormattedAttributes, result: bool) -> Result<ItemFn> {
     let FormattedAttributes { ok_expr, err_expr, log_ts, contained_ok_or_err } = expressions;
     let result = result || contained_ok_or_err;
     let code = if log_ts {
@@ -308,7 +302,7 @@ fn generate_function(closure: &ExprClosure, expressions: FormattedAttributes, re
             quote! {
                 fn temp() {
                     let instant = std::time::Instant::now();
-                    let result = (#closure)();
+                    let result = #closure;
                     let ts = instant.elapsed();
                     result.map(|result| { #ok_expr; result })
                         .map_err(|err| { #err_expr; err })
@@ -318,7 +312,7 @@ fn generate_function(closure: &ExprClosure, expressions: FormattedAttributes, re
             quote! {
                 fn temp() {
                     let instant = std::time::Instant::now();
-                    let result = (#closure)();
+                    let result = #closure;
                     let ts = instant.elapsed();
                     #ok_expr;
                     result
@@ -328,7 +322,7 @@ fn generate_function(closure: &ExprClosure, expressions: FormattedAttributes, re
     } else if result {
         quote! {
             fn temp() {
-                let result = (#closure)();
+                let result = #closure;
                 result.map(|result| { #ok_expr; result })
                     .map_err(|err| { #err_expr; err })
             }
@@ -336,7 +330,7 @@ fn generate_function(closure: &ExprClosure, expressions: FormattedAttributes, re
     } else {
         quote! {
             fn temp() {
-                let result = (#closure)();
+                let result = #closure;
                 #ok_expr;
                 result
             }
