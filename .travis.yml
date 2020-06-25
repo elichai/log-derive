@@ -10,7 +10,10 @@ rust:
   - nightly-2019-11-25-x86_64-unknown-linux-gnu
 script:
   - cargo build --verbose
-  - if [ ${TRAVIS_RUST_VERSION} != "1.32.0" ]; then
+  - if [ ${TRAVIS_RUST_VERSION} != "nightly-2019-05-22-x86_64-unknown-linux-gnu" ] &&
+       [ ${TRAVIS_RUST_VERSION} != "nightly-2019-08-01-x86_64-unknown-linux-gnu" ] &&
+       [ ${TRAVIS_RUST_VERSION} != "1.32.0" ];
+    then
       cargo test --features async,async_test --verbose;
     else
       cargo test --verbose;
