@@ -1,3 +1,7 @@
+mod test_logger;
+
+use crate::test_logger::THREAD_LOGGER;
+use log::Level;
 use log_derive::{logfn, logfn_inputs};
 
 #[logfn(INFO, fmt = "wrapper_function returned {:?}")]
@@ -85,29 +89,55 @@ impl Test for Me {
 
 #[test]
 fn works() {
+    test_logger::init();
     wrapped_function(5, "cool!");
+    THREAD_LOGGER.assert_last_log("wrapper_function returned ()", Level::Info, 7);
     let a = AAAAAA;
     let _ = a.yoyoy(String::from("fds"), 55, vec![1u8; 12]);
+    THREAD_LOGGER.assert_last_log("yoyoy() => [0, 0, 0, 0, 0, 0, 0, 0]", Level::Info, 19);
     let mut b = Me(None);
     let tes = Tes(false);
     b.abc(tes).unwrap();
+    THREAD_LOGGER.assert_last_log("DB: \"Hi!\"", Level::Debug, 41);
+    // `b.abc` calls `third()` so we need to assert that log too.
+    THREAD_LOGGER.assert_last_log("third() => \"Hi!\"", Level::Info, 56);
+    assert!(THREAD_LOGGER.is_empty())
 }
 
 #[test]
 fn test_inputs() {
+    test_logger::init();
     let b = Me(Some(5));
     let tes = Tes(false);
     b.just_inputs(&tes).unwrap();
+    THREAD_LOGGER.assert_last_log("just_inputs(self: Me(Some(5)),err: Tes(false))", Level::Debug, 65);
     b.both(&tes).unwrap();
+
+    // Assert `b.both` input log
+    THREAD_LOGGER.assert_last_log("both() => \"Hi!\"", Level::Info, 75);
+    // `b.both` calls `third()` so wee need to assert that log too
+    THREAD_LOGGER.assert_last_log("third() => \"Hi!\"", Level::Info, 56);
+    // Assert `b.both` output log
+    THREAD_LOGGER.assert_last_log("both(self: Me(Some(5)),err: Tes(false))", Level::Trace, 74);
+    assert!(THREAD_LOGGER.is_empty())
 }
 
 #[test]
 #[should_panic]
 fn fail() {
+    test_logger::init();
     wrapped_function(5, "cool!");
+    THREAD_LOGGER.assert_last_log("wrapper_function returned ()", Level::Info, 7);
     let a = AAAAAA;
     let _ = a.yoyoy(String::from("fds"), 55, vec![1u8; 12]);
+    THREAD_LOGGER.assert_last_log("yoyoy() => [0, 0, 0, 0, 0, 0, 0, 0]", Level::Info, 19);
+
     let mut b = Me(None);
     let tes = Tes(true);
     b.abc(tes).unwrap();
+    THREAD_LOGGER.assert_last_log("DB: E", Level::Trace, 41);
+    // `b.abc` calls `third()` so wee need to assert that log too
+    THREAD_LOGGER.assert_last_log("third() => E", Level::Info, 56);
+
+    assert!(THREAD_LOGGER.is_empty())
 }
