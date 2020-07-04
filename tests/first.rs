@@ -22,7 +22,7 @@ impl AAAAAA {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct E;
 
 trait Test {
@@ -123,7 +123,6 @@ fn test_inputs() {
 }
 
 #[test]
-#[should_panic]
 fn fail() {
     test_logger::init();
     wrapped_function(5, "cool!");
@@ -134,7 +133,7 @@ fn fail() {
 
     let mut b = Me(None);
     let tes = Tes(true);
-    b.abc(tes).unwrap();
+    assert_eq!(b.abc(tes), Err(E));
     THREAD_LOGGER.assert_last_log("DB: E", Level::Trace, 41);
     // `b.abc` calls `third()` so wee need to assert that log too
     THREAD_LOGGER.assert_last_log("third() => E", Level::Info, 56);
