@@ -99,8 +99,8 @@ use quote::{quote, ToTokens};
 
 use syn::punctuated::Punctuated;
 use syn::{
-    parse_macro_input, spanned::Spanned, token, AttributeArgs, Expr, ExprBlock, ExprClosure, FnArg, Ident, ItemFn, Meta, NestedMeta,
-    Pat, Result, ReturnType, Stmt, Type, TypePath,
+    parse_macro_input, spanned::Spanned, token, AttributeArgs, Expr, ExprAsync, ExprAwait, ExprBlock, ExprCall, ExprClosure,
+    ExprParen, FnArg, Ident, ItemFn, Meta, NestedMeta, Pat, Result, ReturnType, Stmt, Type, TypePath,
 };
 
 struct FormattedAttributes {
@@ -277,20 +277,43 @@ fn get_logger_token(att: &Ident) -> TokenStream {
     quote!(log::Level::#att_str)
 }
 
-fn make_closure(original: &ItemFn) -> ExprClosure {
-    let body =
-        Box::new(Expr::Block(ExprBlock { attrs: Default::default(), label: Default::default(), block: *original.block.clone() }));
-
-    ExprClosure {
-        attrs: Default::default(),
-        asyncness: Default::default(),
-        movability: Default::default(),
-        capture: Some(token::Move { span: original.span() }),
-        or1_token: Default::default(),
-        inputs: Default::default(),
-        or2_token: Default::default(),
-        output: ReturnType::Default,
-        body,
+fn make_closure(original: &ItemFn) -> Expr {
+    match original.sig.asyncness {
+        Some(asyncness) => Expr::Await(ExprAwait {
+            attrs: Default::default(),
+            await_token: Default::default(),
+            dot_token: Default::default(),
+            base: Box::new(syn::Expr::Async(ExprAsync {
+                attrs: Default::default(),
+                capture: Some(token::Move { span: original.span() }),
+                block: *original.block.clone(),
+                async_token: asyncness,
+            })),
+        }),
+        None => Expr::Call(ExprCall {
+            attrs: Default::default(),
+            args: Default::default(),
+            paren_token: Default::default(),
+            func: Box::new(syn::Expr::Paren(ExprParen {
+                attrs: Default::default(),
+                paren_token: Default::default(),
+                expr: Box::new(syn::Expr::Closure(ExprClosure {
+                    attrs: Default::default(),
+                    asyncness: Default::default(),
+                    movability: Default::default(),
+                    capture: Some(token::Move { span: original.span() }),
+                    or1_token: Default::default(),
+                    inputs: Default::default(),
+                    or2_token: Default::default(),
+                    output: ReturnType::Default,
+                    body: Box::new(Expr::Block(ExprBlock {
+                        attrs: Default::default(),
+                        label: Default::default(),
+                        block: *original.block.clone(),
+                    })),
+                })),
+            })),
+        }),
     }
 }
 
@@ -300,7 +323,7 @@ fn replace_function_headers(original: ItemFn, new: &mut ItemFn) {
     new.block = block;
 }
 
-fn generate_function(closure: &ExprClosure, expressions: FormattedAttributes, result: bool) -> Result<ItemFn> {
+fn generate_function(closure: &Expr, expressions: FormattedAttributes, result: bool) -> Result<ItemFn> {
     let FormattedAttributes { ok_expr, err_expr, log_ts, contained_ok_or_err } = expressions;
     let result = result || contained_ok_or_err;
     let code = if log_ts {
@@ -308,7 +331,7 @@ fn generate_function(closure: &ExprClosure, expressions: FormattedAttributes, re
             quote! {
                 fn temp() {
                     let instant = std::time::Instant::now();
-                    let result = (#closure)();
+                    let result = #closure;
                     let ts = instant.elapsed();
                     result.map(|result| { #ok_expr; result })
                         .map_err(|err| { #err_expr; err })
@@ -318,7 +341,7 @@ fn generate_function(closure: &ExprClosure, expressions: FormattedAttributes, re
             quote! {
                 fn temp() {
                     let instant = std::time::Instant::now();
-                    let result = (#closure)();
+                    let result = #closure;
                     let ts = instant.elapsed();
                     #ok_expr;
                     result
@@ -328,7 +351,7 @@ fn generate_function(closure: &ExprClosure, expressions: FormattedAttributes, re
     } else if result {
         quote! {
             fn temp() {
-                let result = (#closure)();
+                let result = #closure;
                 result.map(|result| { #ok_expr; result })
                     .map_err(|err| { #err_expr; err })
             }
@@ -336,7 +359,7 @@ fn generate_function(closure: &ExprClosure, expressions: FormattedAttributes, re
     } else {
         quote! {
             fn temp() {
-                let result = (#closure)();
+                let result = #closure;
                 #ok_expr;
                 result
             }
