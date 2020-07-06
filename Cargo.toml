@@ -15,8 +15,7 @@ include = [
 ]
 
 [features]
-async = []
-async_test = ["async", "futures-executor"]
+async_test = ["futures-executor"]
 
 [dependencies]
 darling = "0.10.0"
