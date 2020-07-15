@@ -3,9 +3,9 @@ use std::cell::RefCell;
 
 #[derive(Clone, Debug)]
 pub struct LogRecord {
-    msg: String,
-    level: Level,
-    line: u32,
+    pub msg: String,
+    pub level: Level,
+    pub line: u32,
 }
 
 struct VecLooger(Vec<LogRecord>);
@@ -49,6 +49,10 @@ impl ThreadSingletonLogger {
             assert_eq!(last.level, level);
             assert_eq!(last.line, line);
         })
+    }
+    // Should almost never call this directly
+    pub fn pop_log(&self) -> LogRecord {
+        LOGGER.with(|cell| cell.borrow_mut().0.pop().unwrap())
     }
 
     pub fn is_empty(&self) -> bool {

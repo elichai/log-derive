@@ -118,7 +118,11 @@ fn test_inputs() {
     // `b.both` calls `third()` so wee need to assert that log too
     THREAD_LOGGER.assert_last_log("third() => \"Hi!\"", Level::Info, 56);
     // Assert `b.both` output log
-    THREAD_LOGGER.assert_last_log("both(self: Me(Some(5)),err: Tes(false))", Level::Trace, 74);
+    // Due to a bug in rust stable we can't test the line number here. (rust-lang/rust#74035)
+    // THREAD_LOGGER.assert_last_log("both(self: Me(Some(5)),err: Tes(false))", Level::Trace, 74);
+    let log = THREAD_LOGGER.pop_log();
+    assert_eq!(log.msg, "both(self: Me(Some(5)),err: Tes(false))");
+    assert_eq!(log.level, Level::Trace);
     assert!(THREAD_LOGGER.is_empty())
 }
 
