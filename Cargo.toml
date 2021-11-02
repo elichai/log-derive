@@ -1,11 +1,11 @@
 [package]
 name = "log-derive"
-version = "0.4.1"
+version = "0.4.2"
 license = "MIT/Apache-2.0"
 authors = ["Elichai <elichai.turkel@gmail.com>"]
 repository = "https://github.com/elichai/log-derive"
 readme = "README.md"
-edition = "2018"
+edition = "2021"
 description = "Procedural Macros for logging the result and inputs of a function"
 categories = ["development-tools::debugging"]
 keywords = ["log", "macro", "derive", "logging", "function"]
@@ -18,16 +18,16 @@ include = [
 async_test = ["futures-executor"]
 
 [dependencies]
-darling = "0.10.0"
-proc-macro2 = "1.0.3"
+darling = "0.13.0"
+proc-macro2 = "1.0.32"
 #syn = { version = "0.15", features = ["full", "extra-traits"] } # -> For development
-syn = { version = "1.0.5", features = ["full"] }
-quote = "1.0.2"
-futures-executor = { version = "0.3.5", optional = true } # Can't have optional dev-dependency
+syn = { version = "1.0.81", features = ["full"] }
+quote = "1.0.10"
+futures-executor = { version = "0.3.17", optional = true } # Can't have optional dev-dependency
 
 [dev-dependencies]
-simplelog = "0.8"
-log = "0.4"
+simplelog = "0.10.2"
+log = "0.4.14"
 
 [badges]
 travis-ci = { repository = "elichai/log-derive" }
