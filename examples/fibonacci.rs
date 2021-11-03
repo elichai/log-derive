@@ -1,6 +1,6 @@
 use log::LevelFilter;
 use log_derive::*;
-use simplelog::{Config, TermLogger, TerminalMode};
+use simplelog::{ColorChoice, Config, TermLogger, TerminalMode};
 
 // #[logfn(INFO, fmt = "fibonacci() -> {:?}", err = "Error", ok = "Trace", Warn)]
 // fn fibonacci(n: u32) -> std::result::Result<u32, u32> {
@@ -23,7 +23,7 @@ fn fibonacci(n: u32) -> u32 {
 }
 
 fn main() {
-    TermLogger::init(LevelFilter::Trace, Config::default(), TerminalMode::default()).unwrap();
+    TermLogger::init(LevelFilter::Trace, Config::default(), TerminalMode::default(), ColorChoice::Auto).unwrap();
     let _ = fibonacci(5);
 }
 

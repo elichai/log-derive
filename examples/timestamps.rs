@@ -1,6 +1,6 @@
 use log::LevelFilter;
 use log_derive::logfn;
-use simplelog::{Config, TermLogger, TerminalMode};
+use simplelog::{ColorChoice, Config, TermLogger, TerminalMode};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -23,7 +23,7 @@ fn func3() {
 }
 
 fn main() {
-    TermLogger::init(LevelFilter::Trace, Config::default(), TerminalMode::default()).unwrap();
+    TermLogger::init(LevelFilter::Trace, Config::default(), TerminalMode::default(), ColorChoice::Auto).unwrap();
     func1();
     func2();
     func3();

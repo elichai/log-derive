@@ -2,7 +2,7 @@ use std::fmt;
 
 use log::LevelFilter;
 use log_derive::logfn;
-use simplelog::{Config, TermLogger, TerminalMode};
+use simplelog::{ColorChoice, Config, TermLogger, TerminalMode};
 
 struct DivisibleBy3Error(u32);
 struct DivisibleBy5Error(u32);
@@ -52,7 +52,7 @@ fn not_divisible_by_7(n: u32) -> MyResult<DivisibleBy7Error> {
 }
 
 fn main() {
-    TermLogger::init(LevelFilter::Trace, Config::default(), TerminalMode::default()).unwrap();
+    TermLogger::init(LevelFilter::Trace, Config::default(), TerminalMode::default(), ColorChoice::Auto).unwrap();
     for x in 0..25 {
         let _ = not_divisible_by_3(x);
         let _ = not_divisible_by_5_with_enum_wrap(x);
